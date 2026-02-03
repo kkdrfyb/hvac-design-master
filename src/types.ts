@@ -1,31 +1,8 @@
-export enum TaskCategory {
-  // Outgoing Submissions (Dynamic now, but keeping enum for defaults)
-  STRUCTURE_SUBMISSION = '提资结构',
-  ELECTRICAL_SUBMISSION = '提资电气',
-  IC_SUBMISSION = '提资自控',
-  COMM_SUBMISSION = '提资通信',
-  RAD_SUBMISSION = '提资防护',
-  PLAN_SUBMISSION = '提资总图',
+export type DesignStage = '方案设计' | '初步设计' | '施工图设计';
 
-  // Calculations
-  LOAD_CALC = '负荷计算',
-  SMOKE_CALC = '防排烟计算',
-  RESISTANCE_CALC = '系统水/风阻力',
-  EQUIP_REVIEW = '设备校核',
-  
-  // Specific Process
-  HEATING_PIPELINE = '采暖管道',
-  VENTILATION_SYSTEM = '通风系统',
-  GENERAL_DESIGN = '通用设计流程',
-  
-  // Received Data
-  RX_ARCH = '接收建筑',
-  RX_STRUCT = '接收结构',
-  RX_PROCESS = '接收工艺',
-  RX_ELEC = '接收电气'
-}
+export type ProjectType = '核岛厂房' | '附属工业厂房' | '其他';
 
-export type TaskGroup = 'CALCULATION' | 'OUTGOING' | 'RECEIVED' | 'DESIGN_PROCESS';
+export type TaskGroup = 'INTERFACE' | 'RISK' | 'DELIVERABLE';
 
 export interface SubmissionFile {
   name: string;
@@ -38,10 +15,28 @@ export interface SubmissionVersion {
   files: SubmissionFile[];
 }
 
+export interface TemplateItem {
+  id: string;
+  content: string;
+  group: TaskGroup;
+  categoryId: string;
+  category: string;
+  minimal?: boolean;
+}
+
+export interface TemplateCategory {
+  id: string;
+  name: string;
+  group: TaskGroup;
+  items: TemplateItem[];
+}
+
 export interface TaskItem {
   id: string;
+  categoryId: string;
   category: string; // Changed from enum to string to support dynamic categories
   group: TaskGroup;
+  stage: DesignStage;
   content: string;
   isCompleted: boolean;
   versions: SubmissionVersion[]; // Support multiple versions with multiple files
@@ -82,12 +77,15 @@ export interface SubProject {
   id: string;
   name: string;
   code: string;
+  type: ProjectType;
+  stage: DesignStage;
+  stageHistory: DesignStage[];
+  enabledCategoryIds: string[];
+  stageEnabledCategoryIds: Partial<Record<DesignStage, string[]>>;
   tasks: TaskItem[];
   plans: DesignPlan[];
   designInputContent: string; // Rich text/long text content
   gallery: GalleryItem[];
-  submissionCategories: string[]; // Dynamic categories for Outgoing
-  receivedCategories: string[]; // Dynamic categories for Received
 }
 
 export interface MainProject {

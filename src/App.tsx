@@ -5,8 +5,8 @@ import Sidebar from './components/Sidebar';
 import Calendar from './components/Calendar';
 import Gallery from './components/Gallery';
 import MandatoryClauseModal from './components/MandatoryClauseModal';
-import { ViewState, TaskItem, TaskCategory, CommonError, TaskGroup, DesignPlan, MandatoryClause, MainProject, SubProject, SubmissionVersion, ThemeColor } from './types';
-import { INITIAL_PROJECTS, MANDATORY_CLAUSES, COMMON_ERRORS, createInitialTasks } from './constants';
+import { ViewState, TaskItem, CommonError, TaskGroup, DesignPlan, MandatoryClause, MainProject, SubProject, SubmissionVersion, ThemeColor, DesignStage, ProjectType, TemplateCategory } from './types';
+import { INITIAL_PROJECTS, MANDATORY_CLAUSES, COMMON_ERRORS, DESIGN_STAGES, PROJECT_TYPES, TEMPLATE_CATEGORIES, buildTasksFromTemplate } from './constants';
 import { useAuth } from './context/AuthContext';
 import { Auth } from './components/Auth';
 import { api } from './api';
@@ -15,10 +15,9 @@ import { GoogleGenAI, Chat } from "@google/genai";
 
 // Group mappings
 const GROUP_LABELS: Record<TaskGroup, string> = {
-    CALCULATION: '计算校核 (Calculation & Review)',
-    OUTGOING: '对外提资 (Outgoing Data)',
-    RECEIVED: '接收提资 (Received Data)',
-    DESIGN_PROCESS: '设计流程 (Design Process)'
+    INTERFACE: '多专业接口',
+    RISK: '安全与风险控制',
+    DELIVERABLE: '阶段成果'
 };
 
 // Keyword highlighter component
@@ -38,34 +37,6 @@ const HighlightedText: React.FC<{ text: string; theme: ThemeColor }> = ({ text, 
     );
 };
 
-// Section Component
-const Section: React.FC<{
-    title: string;
-    isOpen: boolean;
-    onToggle: () => void;
-    children: React.ReactNode;
-    theme: ThemeColor;
-}> = ({ title, isOpen, onToggle, children, theme }) => {
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden mb-4 transition-all duration-300 hover:shadow-md">
-            <div
-                className="p-3 bg-slate-50 flex justify-between items-center cursor-pointer select-none"
-                onClick={onToggle}
-            >
-                <h3 className={`font-bold text-slate-700 flex items-center`}>
-                    <span className={`transform transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}>▶</span>
-                    <span className="ml-2">{title}</span>
-                </h3>
-            </div>
-            {isOpen && (
-                <div className="p-4 border-t border-slate-100 animate-fade-in">
-                    {children}
-                </div>
-            )}
-        </div>
-    );
-};
-
 // TaskRow Component
 const TaskRow: React.FC<{
     task: TaskItem;
@@ -74,17 +45,19 @@ const TaskRow: React.FC<{
     onDeleteVersion: (taskId: string, version: string) => void;
     onDeleteTask: () => void;
     theme: ThemeColor;
-}> = ({ task, onToggle, onUpload, onDeleteVersion, onDeleteTask, theme }) => {
+    readOnly?: boolean;
+}> = ({ task, onToggle, onUpload, onDeleteVersion, onDeleteTask, theme, readOnly }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     return (
-        <div className={`p-3 border-l-4 ${task.isCompleted ? `border-${theme}-400 bg-slate-50` : 'border-slate-300 bg-white'} shadow-sm mb-2 rounded-r transition-all hover:shadow group`}>
+        <div className={`p-3 border-l-4 ${task.isCompleted ? `border-${theme}-400 bg-slate-50` : 'border-slate-300 bg-white'} shadow-sm mb-2 rounded-r transition-all hover:shadow group ${readOnly ? 'opacity-70' : ''}`}>
             <div className="flex items-start gap-3">
                 <input
                     type="checkbox"
                     checked={task.isCompleted}
                     onChange={onToggle}
-                    className={`mt-1 w-4 h-4 text-${theme}-600 rounded focus:ring-${theme}-500 cursor-pointer`}
+                    disabled={readOnly}
+                    className={`mt-1 w-4 h-4 text-${theme}-600 rounded focus:ring-${theme}-500 ${readOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                 />
                 <div className="flex-1">
                     <div className={`${task.isCompleted ? 'text-slate-400 line-through' : 'text-slate-800'} text-sm`}>
@@ -102,14 +75,17 @@ const TaskRow: React.FC<{
                                     {v.files.map((f, i) => (
                                         <span key={i} className="underline decoration-slate-300">{f.name}</span>
                                     ))}
-                                    <button onClick={() => onDeleteVersion(task.id, v.version)} className="text-red-400 hover:text-red-600 ml-2 font-bold">×</button>
+                                    {!readOnly && (
+                                        <button onClick={() => onDeleteVersion(task.id, v.version)} className="text-red-400 hover:text-red-600 ml-2 font-bold">×</button>
+                                    )}
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
 
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {!readOnly && (
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         className={`text-slate-400 hover:text-${theme}-600 p-1`}
@@ -127,24 +103,51 @@ const TaskRow: React.FC<{
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                 </div>
+                )}
             </div>
         </div>
     );
 };
 const ensureValidSubProject = (sp: Partial<SubProject> | any): SubProject => {
+    const type: ProjectType = sp?.type || '其他';
+    const stage: DesignStage = sp?.stage || '方案设计';
+    const stageEnabledCategoryIds: Partial<Record<DesignStage, string[]>> = sp?.stageEnabledCategoryIds || {};
+    const currentStageIds = stageEnabledCategoryIds[stage];
+    const enabledCategoryIds = Array.isArray(currentStageIds)
+        ? currentStageIds
+        : Array.isArray(sp?.enabledCategoryIds)
+            ? sp.enabledCategoryIds
+            : TEMPLATE_CATEGORIES[type][stage].map(category => category.id);
+    const normalizedStageEnabled = {
+        ...stageEnabledCategoryIds,
+        [stage]: enabledCategoryIds
+    };
+    const resolveCategoryId = (task: any, fallbackStage: DesignStage) => {
+        if (task?.categoryId) return task.categoryId;
+        const categories = TEMPLATE_CATEGORIES[type][fallbackStage];
+        const matchedCategory = categories.find(category =>
+            category.items.some(item => item.content === task?.content || item.category === task?.category)
+        );
+        return matchedCategory?.id || enabledCategoryIds[0] || categories[0]?.id || 'legacy';
+    };
     return {
         id: sp?.id || `sp_gen_${Date.now()}`,
         name: sp?.name || '未命名子项',
         code: sp?.code || '0000',
+        type,
+        stage,
+        stageHistory: Array.isArray(sp?.stageHistory) ? sp.stageHistory : [],
+        enabledCategoryIds,
+        stageEnabledCategoryIds: normalizedStageEnabled,
         tasks: Array.isArray(sp?.tasks) ? sp.tasks.map((t: any) => ({
             ...t,
+            stage: t?.stage || stage,
+            categoryId: resolveCategoryId(t, t?.stage || stage),
             versions: Array.isArray(t?.versions) ? t.versions : []
-        })) : [],
+        })) : buildTasksFromTemplate(type, stage, enabledCategoryIds),
         plans: Array.isArray(sp?.plans) ? sp.plans : [],
         designInputContent: sp?.designInputContent || '',
-        gallery: Array.isArray(sp?.gallery) ? sp.gallery : [],
-        submissionCategories: Array.isArray(sp?.submissionCategories) ? sp.submissionCategories : [],
-        receivedCategories: Array.isArray(sp?.receivedCategories) ? sp.receivedCategories : []
+        gallery: Array.isArray(sp?.gallery) ? sp.gallery : []
     };
 };
 
@@ -215,6 +218,41 @@ const App: React.FC = () => {
         return ensureValidSubProject(sub);
     }, [currentMain, currentSubId]);
 
+    const [activeStage, setActiveStage] = useState<DesignStage>(currentSub.stage);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string>('overview');
+
+    useEffect(() => {
+        setActiveStage(currentSub.stage);
+        setSelectedCategoryId('overview');
+    }, [currentSub.id, currentSub.stage]);
+
+    useEffect(() => {
+        setSelectedCategoryId('overview');
+    }, [activeStage]);
+
+    const currentStageCategories = useMemo<TemplateCategory[]>(() => {
+        return TEMPLATE_CATEGORIES[currentSub.type][activeStage];
+    }, [currentSub.type, activeStage]);
+
+    const activeStageEnabledIds = useMemo(() => {
+        const stored = currentSub.stageEnabledCategoryIds?.[activeStage];
+        return Array.isArray(stored) && stored.length
+            ? stored
+            : currentSub.enabledCategoryIds.length
+                ? currentSub.enabledCategoryIds
+                : currentStageCategories.map(category => category.id);
+    }, [currentSub.stageEnabledCategoryIds, currentSub.enabledCategoryIds, currentStageCategories, activeStage]);
+
+    const enabledCategories = useMemo(() => {
+        const enabledSet = new Set(activeStageEnabledIds);
+        return currentStageCategories.filter(category => enabledSet.has(category.id));
+    }, [currentStageCategories, activeStageEnabledIds]);
+
+    const activeStageTasks = useMemo(() => {
+        const enabledSet = new Set(activeStageEnabledIds);
+        return currentSub.tasks.filter(task => task.stage === activeStage && enabledSet.has(task.categoryId));
+    }, [currentSub.tasks, activeStage, activeStageEnabledIds]);
+
     // Helpers to update current subproject state and persist to DB
     const updateCurrentSubProject = (updater: (sp: SubProject) => SubProject) => {
         setProjects(prevProjects => {
@@ -238,18 +276,6 @@ const App: React.FC = () => {
         });
     };
 
-    // Refs for Scrolling
-    const calcRef = useRef<HTMLDivElement>(null);
-    const outgoingRef = useRef<HTMLDivElement>(null);
-    const receivedRef = useRef<HTMLDivElement>(null);
-    const processRef = useRef<HTMLDivElement>(null);
-    const sectionRefs: Record<TaskGroup, React.RefObject<HTMLDivElement>> = {
-        CALCULATION: calcRef,
-        OUTGOING: outgoingRef,
-        RECEIVED: receivedRef,
-        DESIGN_PROCESS: processRef
-    };
-
     // Mandatory Clauses State
     const [mandatoryClauses, setMandatoryClauses] = useState<MandatoryClause[]>(MANDATORY_CLAUSES);
     const [shuffledClauses, setShuffledClauses] = useState<MandatoryClause[]>([]); // All clauses, shuffled
@@ -262,14 +288,6 @@ const App: React.FC = () => {
     const [shuffledErrors, setShuffledErrors] = useState<CommonError[]>([]); // All errors, shuffled
     const [errorSearch, setErrorSearch] = useState('');
     const [errorDisplayCount, setErrorDisplayCount] = useState(4);
-
-    // Filter State for Dashboard
-    const [expandedGroups, setExpandedGroups] = useState<Record<TaskGroup, boolean>>({
-        CALCULATION: true,
-        OUTGOING: true,
-        RECEIVED: true,
-        DESIGN_PROCESS: true
-    });
 
     // AI State
     const [aiQuestion, setAiQuestion] = useState<string | null>(null);
@@ -285,14 +303,25 @@ const App: React.FC = () => {
 
     // Modals State
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
-    const [newProjectData, setNewProjectData] = useState({ mainName: '', mainCode: '', subName: '', subCode: '' });
+    const [newProjectData, setNewProjectData] = useState({
+        mainName: '',
+        mainCode: '',
+        subName: '',
+        subCode: '',
+        type: '附属工业厂房' as ProjectType,
+        stage: '初步设计' as DesignStage,
+        enabledCategoryIds: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id),
+        stageEnabledCategoryIds: {
+            初步设计: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id)
+        } as Partial<Record<DesignStage, string[]>>
+    });
 
     const [showImportSettingsModal, setShowImportSettingsModal] = useState(false);
     const [importSelection, setImportSelection] = useState({ mainId: '', subId: '' });
 
     // Add Task Modal State (Replaces Prompt)
     const [addTaskModalOpen, setAddTaskModalOpen] = useState(false);
-    const [addTaskParams, setAddTaskParams] = useState<{ group: TaskGroup, category: string } | null>(null);
+    const [addTaskParams, setAddTaskParams] = useState<{ group: TaskGroup, category: string, categoryId: string } | null>(null);
     const [newTaskContent, setNewTaskContent] = useState('');
 
     // Manual Plan Entry State
@@ -369,25 +398,27 @@ const App: React.FC = () => {
         URL.revokeObjectURL(url);
     };
 
-    const handleBoxClick = (group: TaskGroup) => {
-        setExpandedGroups(prev => ({ ...prev, [group]: true }));
-        setTimeout(() => {
-            sectionRefs[group].current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    };
-
     const handleCreateProject = () => {
         if (newProjectData.mainName && newProjectData.subName) {
+            const enabledCategoryIds = newProjectData.enabledCategoryIds.length
+                ? newProjectData.enabledCategoryIds
+                : TEMPLATE_CATEGORIES[newProjectData.type][newProjectData.stage].map(category => category.id);
             const newSub: SubProject = {
                 id: `sp_${Date.now()}`,
                 name: newProjectData.subName,
                 code: newProjectData.subCode,
-                tasks: createInitialTasks(),
+                type: newProjectData.type,
+                stage: newProjectData.stage,
+                stageHistory: [],
+                enabledCategoryIds,
+                stageEnabledCategoryIds: {
+                    ...newProjectData.stageEnabledCategoryIds,
+                    [newProjectData.stage]: enabledCategoryIds
+                },
+                tasks: buildTasksFromTemplate(newProjectData.type, newProjectData.stage, enabledCategoryIds),
                 plans: [],
                 designInputContent: '请导入设计输入或在此编辑...',
-                gallery: [],
-                submissionCategories: ['结构专业', '电气专业'],
-                receivedCategories: ['建筑专业', '结构专业']
+                gallery: []
             };
             const existingMain = projects.find(p => p.name === newProjectData.mainName);
             if (existingMain) {
@@ -411,8 +442,52 @@ const App: React.FC = () => {
                 api.post('/projects', newMain).catch(e => console.error(e));
             }
             setShowNewProjectModal(false);
-            setNewProjectData({ mainName: '', mainCode: '', subName: '', subCode: '' });
+            setNewProjectData({
+                mainName: '',
+                mainCode: '',
+                subName: '',
+                subCode: '',
+                type: '附属工业厂房',
+                stage: '初步设计',
+                enabledCategoryIds: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id),
+                stageEnabledCategoryIds: {
+                    初步设计: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id)
+                }
+            });
         }
+    };
+
+    const handleTemplateSelectionChange = (nextType: ProjectType, nextStage: DesignStage) => {
+        const categoryIds = TEMPLATE_CATEGORIES[nextType][nextStage].map(category => category.id);
+        setNewProjectData(prev => ({
+            ...prev,
+            type: nextType,
+            stage: nextStage,
+            enabledCategoryIds: categoryIds,
+            stageEnabledCategoryIds: {
+                ...prev.stageEnabledCategoryIds,
+                [nextStage]: categoryIds
+            }
+        }));
+    };
+
+    const toggleNewCategory = (categoryId: string) => {
+        setNewProjectData(prev => {
+            const next = new Set(prev.enabledCategoryIds);
+            if (next.has(categoryId)) {
+                next.delete(categoryId);
+            } else {
+                next.add(categoryId);
+            }
+            return {
+                ...prev,
+                enabledCategoryIds: Array.from(next),
+                stageEnabledCategoryIds: {
+                    ...prev.stageEnabledCategoryIds,
+                    [prev.stage]: Array.from(next)
+                }
+            };
+        });
     };
 
     const handleImportSettings = () => {
@@ -423,14 +498,17 @@ const App: React.FC = () => {
         if (sourceSub) {
             updateCurrentSubProject(sp => ({
                 ...sp,
-                // Import categories
-                submissionCategories: [...new Set([...(sp.submissionCategories || []), ...(sourceSub.submissionCategories || [])])],
-                receivedCategories: [...new Set([...(sp.receivedCategories || []), ...(sourceSub.receivedCategories || [])])],
-                // Import tasks
+                enabledCategoryIds: [...new Set([...(sp.enabledCategoryIds || []), ...(sourceSub.enabledCategoryIds || [])])],
+                stageEnabledCategoryIds: {
+                    ...sp.stageEnabledCategoryIds,
+                    ...sourceSub.stageEnabledCategoryIds,
+                    [sp.stage]: Array.from(new Set([...(sp.stageEnabledCategoryIds?.[sp.stage] || []), ...(sourceSub.stageEnabledCategoryIds?.[sp.stage] || [])]))
+                },
+                // Import tasks (only if not duplicated)
                 tasks: [
                     ...(sp.tasks || []),
                     ...(sourceSub.tasks || [])
-                        .filter(t => !sp.tasks?.some(ct => ct.content === t.content && ct.category === t.category))
+                        .filter(t => !sp.tasks?.some(ct => ct.content === t.content && ct.category === t.category && ct.stage === t.stage))
                         .map(t => ({ ...t, id: `imported_${Date.now()}_${t.id}`, isCompleted: false, versions: [] }))
                 ]
             }));
@@ -452,8 +530,8 @@ const App: React.FC = () => {
     const handleGenerateQuestion = async () => {
         setLoadingAi(true);
         try {
-            const categories = Object.values(TaskCategory);
-            const randomCat = categories[Math.floor(Math.random() * categories.length)];
+            const categories = Array.from(new Set(activeStageTasks.map(t => t.category)));
+            const randomCat = categories[Math.floor(Math.random() * categories.length)] || '设计流程';
             const question = await generateWorkflowQuestion(randomCat, customModelName);
             setAiQuestion(question);
         } catch (e) {
@@ -479,6 +557,7 @@ const App: React.FC = () => {
     };
 
     const toggleTask = (id: string) => {
+        if (activeStage !== currentSub.stage) return;
         updateCurrentSubProject(sp => ({
             ...sp,
             tasks: sp.tasks.map(t => t.id === id ? { ...t, isCompleted: !t.isCompleted } : t)
@@ -486,6 +565,7 @@ const App: React.FC = () => {
     };
 
     const handleDeleteTask = (taskId: string) => {
+        if (activeStage !== currentSub.stage) return;
         if (confirm("确定删除此任务项吗？")) {
             updateCurrentSubProject(sp => ({
                 ...sp,
@@ -552,6 +632,7 @@ const App: React.FC = () => {
     };
 
     const handleTaskFileUpload = (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        if (activeStage !== currentSub.stage) return;
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
@@ -579,6 +660,7 @@ const App: React.FC = () => {
     };
 
     const handleDeleteVersion = (taskId: string, version: string) => {
+        if (activeStage !== currentSub.stage) return;
         updateCurrentSubProject(sp => {
             const taskIndex = sp.tasks.findIndex(t => t.id === taskId);
             if (taskIndex === -1) return sp;
@@ -589,34 +671,9 @@ const App: React.FC = () => {
         });
     }
 
-    const handleAddCategory = (group: TaskGroup, categoryName: string) => {
-        if (!categoryName) return;
-        updateCurrentSubProject(sp => {
-            if (group === 'OUTGOING') {
-                if (sp.submissionCategories.includes(categoryName)) return sp;
-                return { ...sp, submissionCategories: [...sp.submissionCategories, categoryName] };
-            } else if (group === 'RECEIVED') {
-                if (sp.receivedCategories.includes(categoryName)) return sp;
-                return { ...sp, receivedCategories: [...sp.receivedCategories, categoryName] };
-            }
-            return sp;
-        });
-    };
-
-    const handleRemoveCategory = (group: TaskGroup, categoryName: string) => {
-        updateCurrentSubProject(sp => {
-            if (group === 'OUTGOING') {
-                return { ...sp, submissionCategories: sp.submissionCategories.filter(c => c !== categoryName) };
-            } else if (group === 'RECEIVED') {
-                return { ...sp, receivedCategories: sp.receivedCategories.filter(c => c !== categoryName) };
-            }
-            return sp;
-        });
-    };
-
     // Open the Modal instead of using prompt
-    const openAddTaskModal = (group: TaskGroup, category: string) => {
-        setAddTaskParams({ group, category });
+    const openAddTaskModal = (group: TaskGroup, category: string, categoryId: string) => {
+        setAddTaskParams({ group, category, categoryId });
         setNewTaskContent('');
         setAddTaskModalOpen(true);
     };
@@ -624,13 +681,15 @@ const App: React.FC = () => {
     const handleConfirmAddTask = () => {
         if (!newTaskContent.trim() || !addTaskParams) return;
 
-        const { group, category } = addTaskParams;
+        const { group, category, categoryId } = addTaskParams;
 
         updateCurrentSubProject(sp => {
             const newTask: TaskItem = {
                 id: `t_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                categoryId,
                 category,
                 group,
+                stage: currentSub.stage,
                 content: newTaskContent,
                 isCompleted: false,
                 versions: []
@@ -674,218 +733,312 @@ const App: React.FC = () => {
         }
     };
 
-    const renderDashboard = () => (
-        <div className="flex gap-6 h-full overflow-hidden">
-            <div className="flex-1 flex flex-col min-h-0">
+    const renderDashboard = () => {
+        const isViewingHistory = activeStage !== currentSub.stage;
+        const stageOptions = Array.from(new Set([currentSub.stage, ...currentSub.stageHistory]))
+            .sort((a, b) => DESIGN_STAGES.indexOf(a) - DESIGN_STAGES.indexOf(b));
+        const minimalTemplates = currentStageCategories.flatMap(category => category.items.filter(item => item.minimal));
+        const minimalTasks = minimalTemplates.map(template => {
+            const task = activeStageTasks.find(t => t.content === template.content && t.categoryId === template.categoryId);
+            return { ...template, task };
+        });
+        const nextStage = DESIGN_STAGES[DESIGN_STAGES.indexOf(currentSub.stage) + 1];
 
-                {/* Top Fixed Area */}
-                <div className="flex-shrink-0 bg-slate-50 z-10 pb-4 pr-2">
-                    <div className="mb-4 flex justify-between items-center">
-                        {/* Removed duplicate header */}
-                        <button onClick={() => setShowImportSettingsModal(true)} className={`text-xs px-2 py-1 rounded bg-${theme}-100 text-${theme}-700 hover:bg-${theme}-200 transition shadow-sm`}>
-                            ⚙️ 导入项目配置
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {(['CALCULATION', 'OUTGOING', 'RECEIVED', 'DESIGN_PROCESS'] as TaskGroup[]).map(group => {
-                            const tasks = currentSub.tasks.filter(t => t.group === group);
-                            const progress = tasks.length ? Math.round((tasks.filter(t => t.isCompleted).length / tasks.length) * 100) : 0;
-                            return (
-                                <div
-                                    key={group}
-                                    onClick={() => handleBoxClick(group)}
-                                    className={`bg-white p-3 rounded-lg shadow-sm border border-slate-100 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-md hover:border-${theme}-300`}
+        const handleStageAdvance = () => {
+            if (!nextStage) return;
+            if (!confirm(`确认切换到 ${nextStage} 阶段？切换后新增文件将归入新阶段。`)) return;
+            updateCurrentSubProject(sp => {
+                const stageHistory = Array.from(new Set([...(sp.stageHistory || []), sp.stage]));
+                const stageCategoryIds = TEMPLATE_CATEGORIES[sp.type][nextStage].map(category => category.id);
+                const retainedEnabled = (sp.enabledCategoryIds || []).filter(id => stageCategoryIds.includes(id));
+                const enabledCategoryIds = retainedEnabled.length ? retainedEnabled : stageCategoryIds;
+                const stageEnabledCategoryIds = {
+                    ...sp.stageEnabledCategoryIds,
+                    [nextStage]: enabledCategoryIds
+                };
+                const hasStageTasks = sp.tasks.some(task => task.stage === nextStage);
+                const tasks = hasStageTasks
+                    ? sp.tasks
+                    : [...sp.tasks, ...buildTasksFromTemplate(sp.type, nextStage, enabledCategoryIds)];
+                return {
+                    ...sp,
+                    stage: nextStage,
+                    stageHistory,
+                    enabledCategoryIds,
+                    stageEnabledCategoryIds,
+                    tasks
+                };
+            });
+        };
+
+        return (
+            <div className="flex gap-6 h-full overflow-hidden">
+                <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-shrink-0 bg-slate-50 z-10 pb-4 pr-2 space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <p className="text-xs text-slate-500">项目：{currentMain.name}（{currentMain.code}）</p>
+                                <p className="text-sm font-bold text-slate-700">子项：{currentSub.name}（{currentSub.code}）</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col text-xs text-slate-500">
+                                    <span>当前阶段：{currentSub.stage}</span>
+                                    {isViewingHistory && <span className="text-amber-600">历史阶段浏览中</span>}
+                                </div>
+                                <select
+                                    value={activeStage}
+                                    onChange={(e) => setActiveStage(e.target.value as DesignStage)}
+                                    className="border border-slate-200 rounded-lg px-3 py-2 text-xs bg-white"
                                 >
-                                    <div className="text-xs font-medium text-slate-500 mb-1 truncate">{GROUP_LABELS[group]}</div>
-                                    <div className={`text-2xl font-bold text-${theme}-700`}>{progress}%</div>
-                                    <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-                                        <div className={`bg-${theme}-500 h-1.5 rounded-full transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Scrollable Content Area */}
-                <div className="flex-1 overflow-y-auto pr-2 pb-20 scrollbar-hide space-y-6">
-
-                    <div ref={calcRef}>
-                        <Section
-                            title={GROUP_LABELS['CALCULATION']}
-                            isOpen={expandedGroups['CALCULATION']}
-                            onToggle={() => setExpandedGroups({ ...expandedGroups, CALCULATION: !expandedGroups.CALCULATION })}
-                            theme={theme}
-                        >
-                            {currentSub.tasks.filter(t => t.group === 'CALCULATION').map(task => (
-                                <TaskRow key={task.id} task={task} onToggle={() => toggleTask(task.id)} onUpload={(e) => handleTaskFileUpload(task.id, e)} onDeleteVersion={handleDeleteVersion} onDeleteTask={() => handleDeleteTask(task.id)} theme={theme} />
-                            ))}
-                        </Section>
-                    </div>
-
-                    <div ref={outgoingRef}>
-                        <Section
-                            title={GROUP_LABELS['OUTGOING']}
-                            isOpen={expandedGroups['OUTGOING']}
-                            onToggle={() => setExpandedGroups({ ...expandedGroups, OUTGOING: !expandedGroups.OUTGOING })}
-                            theme={theme}
-                        >
-                            <div className="flex flex-wrap gap-2 mb-4 px-4 animate-fade-in">
-                                {currentSub.submissionCategories.map(cat => (
-                                    <div key={cat} className="group relative">
-                                        <button className={`px-3 py-1 bg-${theme}-50 text-${theme}-700 rounded text-sm hover:bg-${theme}-100 transition`}>{cat}</button>
-                                        <button onClick={() => handleRemoveCategory('OUTGOING', cat)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition">×</button>
-                                    </div>
-                                ))}
-                                <button onClick={() => { const c = prompt('新分类名称:'); if (c) handleAddCategory('OUTGOING', c); }} className="px-3 py-1 border border-dashed border-slate-300 text-slate-500 rounded text-sm hover:bg-slate-50 hover:text-blue-500 transition">+ 分类</button>
-                            </div>
-
-                            {currentSub.submissionCategories.map(cat => (
-                                <div key={cat} className="mb-4 px-4 transition-all duration-300">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h4 className={`font-bold text-slate-600 text-sm border-l-4 border-${theme}-400 pl-2`}>{cat}</h4>
-                                        <button onClick={() => openAddTaskModal('OUTGOING', cat)} className={`text-xs text-${theme}-600 hover:underline font-medium cursor-pointer`}>+ 添加提资项</button>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {currentSub.tasks.filter(t => t.group === 'OUTGOING' && t.category === cat).map(task => (
-                                            <TaskRow key={task.id} task={task} onToggle={() => toggleTask(task.id)} onUpload={(e) => handleTaskFileUpload(task.id, e)} onDeleteVersion={handleDeleteVersion} onDeleteTask={() => handleDeleteTask(task.id)} theme={theme} />
-                                        ))}
-                                        {currentSub.tasks.filter(t => t.group === 'OUTGOING' && t.category === cat).length === 0 && (
-                                            <div className="text-xs text-slate-400 italic pl-2">暂无提资项</div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </Section>
-                    </div>
-
-                    <div ref={receivedRef}>
-                        <Section
-                            title={GROUP_LABELS['RECEIVED']}
-                            isOpen={expandedGroups['RECEIVED']}
-                            onToggle={() => setExpandedGroups({ ...expandedGroups, RECEIVED: !expandedGroups.RECEIVED })}
-                            theme={theme}
-                        >
-                            <div className="flex flex-wrap gap-2 mb-4 px-4 animate-fade-in">
-                                {currentSub.receivedCategories.map(cat => (
-                                    <div key={cat} className="group relative">
-                                        <button className={`px-3 py-1 bg-${theme}-50 text-${theme}-700 rounded text-sm hover:bg-${theme}-100 transition`}>{cat}</button>
-                                        <button onClick={() => handleRemoveCategory('RECEIVED', cat)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition">×</button>
-                                    </div>
-                                ))}
-                                <button onClick={() => { const c = prompt('新分类名称:'); if (c) handleAddCategory('RECEIVED', c); }} className="px-3 py-1 border border-dashed border-slate-300 text-slate-500 rounded text-sm hover:bg-slate-50 hover:text-blue-500 transition">+ 分类</button>
-                            </div>
-
-                            {currentSub.receivedCategories.map(cat => (
-                                <div key={cat} className="mb-4 px-4 transition-all duration-300">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h4 className={`font-bold text-slate-600 text-sm border-l-4 border-${theme}-400 pl-2`}>{cat}</h4>
-                                        <button onClick={() => openAddTaskModal('RECEIVED', cat)} className={`text-xs text-${theme}-600 hover:underline font-medium cursor-pointer`}>+ 添加接收项</button>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {currentSub.tasks.filter(t => t.group === 'RECEIVED' && t.category === cat).map(task => (
-                                            <TaskRow key={task.id} task={task} onToggle={() => toggleTask(task.id)} onUpload={(e) => handleTaskFileUpload(task.id, e)} onDeleteVersion={handleDeleteVersion} onDeleteTask={() => handleDeleteTask(task.id)} theme={theme} />
-                                        ))}
-                                        {currentSub.tasks.filter(t => t.group === 'RECEIVED' && t.category === cat).length === 0 && (
-                                            <div className="text-xs text-slate-400 italic pl-2">暂无接收项</div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </Section>
-                    </div>
-
-                    <div ref={processRef}>
-                        <Section
-                            title={GROUP_LABELS['DESIGN_PROCESS']}
-                            isOpen={expandedGroups['DESIGN_PROCESS']}
-                            onToggle={() => setExpandedGroups({ ...expandedGroups, DESIGN_PROCESS: !expandedGroups.DESIGN_PROCESS })}
-                            theme={theme}
-                        >
-                            <div className="px-4 mb-2 flex justify-end">
-                                <button onClick={() => openAddTaskModal('DESIGN_PROCESS', TaskCategory.GENERAL_DESIGN)} className={`text-xs text-${theme}-600 hover:underline font-medium cursor-pointer`}>+ 添加设计流程项</button>
-                            </div>
-                            {currentSub.tasks.filter(t => t.group === 'DESIGN_PROCESS').map(task => (
-                                <TaskRow key={task.id} task={task} onToggle={() => toggleTask(task.id)} onUpload={(e) => handleTaskFileUpload(task.id, e)} onDeleteVersion={handleDeleteVersion} onDeleteTask={() => handleDeleteTask(task.id)} theme={theme} />
-                            ))}
-                        </Section>
-                    </div>
-                </div>
-            </div>
-
-            <div className="w-80 flex-shrink-0 flex flex-col gap-6 overflow-y-auto pb-20 scrollbar-hide animate-fade-in-right">
-                <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
-                    <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <h3 className="font-bold text-slate-700">项目日历</h3>
-                        <div className="flex gap-2 items-center">
-                            <button onClick={() => setShowPlanEntry(!showPlanEntry)} className={`text-xs text-${theme}-600 font-bold border border-${theme}-200 px-1 rounded hover:bg-${theme}-50`} title="手动添加">+添加</button>
-                            <button onClick={() => downloadTemplate('plan')} className={`text-xs text-${theme}-600 hover:underline`} title="下载模版">⬇</button>
-                            <button onClick={() => planFileInputRef.current?.click()} className={`text-xs text-${theme}-600 hover:underline`}>导入</button>
-                        </div>
-                        <input type="file" ref={planFileInputRef} onChange={handleExcelImport} accept=".xlsx, .xls" className="hidden" />
-                    </div>
-
-                    {showPlanEntry && (
-                        <div className="p-3 bg-yellow-50 border-b border-yellow-100 animate-fade-in">
-                            <input type="date" className="w-full border p-1 rounded mb-1 text-xs" value={newPlanEntry.date} onChange={e => setNewPlanEntry({ ...newPlanEntry, date: e.target.value })} />
-                            <input type="text" placeholder="里程碑名称" className="w-full border p-1 rounded mb-2 text-xs" value={newPlanEntry.name} onChange={e => setNewPlanEntry({ ...newPlanEntry, name: e.target.value })} />
-                            <div className="flex justify-end gap-2">
-                                <button onClick={() => setShowPlanEntry(false)} className="text-xs text-slate-500">取消</button>
-                                <button onClick={handleManualPlanAdd} className="text-xs bg-blue-600 text-white px-2 py-1 rounded">确认</button>
+                                    {stageOptions.map(stage => (
+                                        <option key={stage} value={stage}>{stage}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={handleStageAdvance}
+                                    disabled={!nextStage}
+                                    className={`px-3 py-2 text-xs rounded-lg font-bold ${nextStage ? `bg-${theme}-600 text-white hover:bg-${theme}-700` : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                                >
+                                    阶段切换
+                                </button>
+                                <button onClick={() => setShowImportSettingsModal(true)} className={`text-xs px-2 py-1 rounded bg-${theme}-100 text-${theme}-700 hover:bg-${theme}-200 transition shadow-sm`}>
+                                    ⚙️ 导入项目配置
+                                </button>
                             </div>
                         </div>
-                    )}
 
-                    <Calendar plans={currentSub.plans} />
-                    <div className="p-3 text-xs text-slate-500 border-t border-slate-100">
-                        提示：悬停在标记日期上查看里程碑。
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex-1 flex flex-col transition-all hover:shadow-md">
-                    <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <h3 className="font-bold text-slate-700">设计输入提要</h3>
-                        <div className="flex gap-2">
-                            <button onClick={() => downloadTemplate('input')} className={`text-xs text-${theme}-600 hover:underline`} title="下载模版">⬇ 模版</button>
-                            <button onClick={() => inputFileInputRef.current?.click()} className={`text-xs text-${theme}-600 hover:underline`}>导入输入</button>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {(Object.keys(GROUP_LABELS) as TaskGroup[]).map(group => {
+                                const tasks = activeStageTasks.filter(t => t.group === group);
+                                const progress = tasks.length ? Math.round((tasks.filter(t => t.isCompleted).length / tasks.length) * 100) : 0;
+                                return (
+                                    <div
+                                        key={group}
+                                        className={`bg-white p-3 rounded-lg shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-md hover:border-${theme}-300`}
+                                    >
+                                        <div className="text-xs font-medium text-slate-500 mb-1 truncate">{GROUP_LABELS[group]}</div>
+                                        <div className={`text-2xl font-bold text-${theme}-700`}>{progress}%</div>
+                                        <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+                                            <div className={`bg-${theme}-500 h-1.5 rounded-full transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                        <input type="file" ref={inputFileInputRef} onChange={handleDesignInputImport} accept=".txt, .doc, .docx" className="hidden" />
                     </div>
-                    <textarea
-                        className="flex-1 w-full p-3 text-sm text-slate-700 resize-none focus:outline-none"
-                        value={currentSub.designInputContent}
-                        onChange={(e) => updateCurrentSubProject(sp => ({ ...sp, designInputContent: e.target.value }))}
-                        placeholder="在此处梳理关键设计输入..."
-                    />
+
+                    <div className="flex-1 overflow-y-auto pr-2 pb-20 scrollbar-hide">
+                        <div className="flex gap-6 min-h-0">
+                            <aside className="w-64 flex-shrink-0 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
+                                <div>
+                                    <button
+                                        onClick={() => setSelectedCategoryId('overview')}
+                                        className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${selectedCategoryId === 'overview'
+                                            ? `bg-${theme}-50 text-${theme}-700 border border-${theme}-100`
+                                            : 'text-slate-500 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        项目设计情况
+                                    </button>
+                                </div>
+                                {(Object.keys(GROUP_LABELS) as TaskGroup[]).map(group => {
+                                    const groupCategories = enabledCategories.filter(category => category.group === group);
+                                    if (groupCategories.length === 0) return null;
+                                    return (
+                                        <div key={group} className="space-y-2">
+                                            <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{GROUP_LABELS[group]}</div>
+                                            <div className="space-y-1">
+                                                {groupCategories.map(category => {
+                                                    const taskCount = activeStageTasks.filter(task => task.categoryId === category.id).length;
+                                                    return (
+                                                        <button
+                                                            key={category.id}
+                                                            onClick={() => setSelectedCategoryId(category.id)}
+                                                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${selectedCategoryId === category.id
+                                                                ? `bg-${theme}-50 text-${theme}-700 border border-${theme}-100`
+                                                                : 'text-slate-500 hover:bg-slate-50'
+                                                                }`}
+                                                        >
+                                                            <span className="truncate">{category.name}</span>
+                                                            <span className="ml-2 text-[10px] text-slate-400">({taskCount})</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <div className="pt-4 border-t border-slate-100 space-y-2">
+                                    <button
+                                        onClick={() => setCurrentView('regulations')}
+                                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50"
+                                    >
+                                        规范条文
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentView('errors')}
+                                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50"
+                                    >
+                                        设计常见问题
+                                    </button>
+                                </div>
+                            </aside>
+
+                            <section className="flex-1 min-w-0 space-y-6">
+                                {selectedCategoryId === 'overview' ? (
+                                    <div className="space-y-6">
+                                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-slate-800">前台极简执行视图</h3>
+                                                    <p className="text-xs text-slate-400">聚焦当前阶段最关键的 3-5 项</p>
+                                                </div>
+                                                <span className={`text-xs px-2 py-1 rounded-full bg-${theme}-100 text-${theme}-700`}>{activeStage}</span>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {minimalTasks.map(item => (
+                                                    <div key={item.id} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={item.task?.isCompleted || false}
+                                                            onChange={() => item.task && toggleTask(item.task.id)}
+                                                            disabled={!item.task || isViewingHistory}
+                                                            className={`w-4 h-4 text-${theme}-600 rounded`}
+                                                        />
+                                                        <span className="text-sm text-slate-700">{item.content}</span>
+                                                        {item.task && (
+                                                            <button
+                                                                onClick={() => setSelectedCategoryId(item.categoryId)}
+                                                                className={`ml-auto text-xs text-${theme}-600 hover:underline`}
+                                                            >
+                                                                进入分类
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                                {minimalTasks.length === 0 && (
+                                                    <div className="text-xs text-slate-400">暂无极简执行项。</div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h3 className="font-bold text-slate-700">项目日历</h3>
+                                                    <div className="flex gap-2 items-center">
+                                                        <button onClick={() => setShowPlanEntry(!showPlanEntry)} className={`text-xs text-${theme}-600 font-bold border border-${theme}-200 px-1 rounded hover:bg-${theme}-50`} title="手动添加">+添加</button>
+                                                        <button onClick={() => downloadTemplate('plan')} className={`text-xs text-${theme}-600 hover:underline`} title="下载模版">⬇</button>
+                                                        <button onClick={() => planFileInputRef.current?.click()} className={`text-xs text-${theme}-600 hover:underline`}>导入</button>
+                                                    </div>
+                                                    <input type="file" ref={planFileInputRef} onChange={handleExcelImport} accept=".xlsx, .xls" className="hidden" />
+                                                </div>
+
+                                                {showPlanEntry && (
+                                                    <div className="p-3 bg-yellow-50 border-b border-yellow-100 animate-fade-in">
+                                                        <input type="date" className="w-full border p-1 rounded mb-1 text-xs" value={newPlanEntry.date} onChange={e => setNewPlanEntry({ ...newPlanEntry, date: e.target.value })} />
+                                                        <input type="text" placeholder="里程碑名称" className="w-full border p-1 rounded mb-2 text-xs" value={newPlanEntry.name} onChange={e => setNewPlanEntry({ ...newPlanEntry, name: e.target.value })} />
+                                                        <div className="flex justify-end gap-2">
+                                                            <button onClick={() => setShowPlanEntry(false)} className="text-xs text-slate-500">取消</button>
+                                                            <button onClick={handleManualPlanAdd} className="text-xs bg-blue-600 text-white px-2 py-1 rounded">确认</button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <Calendar plans={currentSub.plans} />
+                                                <div className="p-3 text-xs text-slate-500 border-t border-slate-100">
+                                                    提示：悬停在标记日期上查看里程碑。
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm">
+                                                <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                                                    <h3 className="font-bold text-slate-700">设计输入提要</h3>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => downloadTemplate('input')} className={`text-xs text-${theme}-600 hover:underline`} title="下载模版">⬇ 模版</button>
+                                                        <button onClick={() => inputFileInputRef.current?.click()} className={`text-xs text-${theme}-600 hover:underline`}>导入输入</button>
+                                                    </div>
+                                                    <input type="file" ref={inputFileInputRef} onChange={handleDesignInputImport} accept=".txt, .doc, .docx" className="hidden" />
+                                                </div>
+                                                <textarea
+                                                    className="flex-1 w-full p-3 text-sm text-slate-700 resize-none focus:outline-none"
+                                                    value={currentSub.designInputContent}
+                                                    onChange={(e) => updateCurrentSubProject(sp => ({ ...sp, designInputContent: e.target.value }))}
+                                                    placeholder="在此处梳理关键设计输入..."
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-slate-800">
+                                                    {enabledCategories.find(category => category.id === selectedCategoryId)?.name}
+                                                </h3>
+                                                {isViewingHistory && <p className="text-xs text-amber-600 mt-1">历史阶段仅供查看，不可编辑</p>}
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    const category = enabledCategories.find(c => c.id === selectedCategoryId);
+                                                    if (category) openAddTaskModal(category.group, category.name, category.id);
+                                                }}
+                                                disabled={isViewingHistory}
+                                                className={`text-xs font-medium ${isViewingHistory ? 'text-slate-300 cursor-not-allowed' : `text-${theme}-600 hover:underline`}`}
+                                            >
+                                                + 添加条目
+                                            </button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {activeStageTasks.filter(task => task.categoryId === selectedCategoryId).map(task => (
+                                                <TaskRow
+                                                    key={task.id}
+                                                    task={task}
+                                                    onToggle={() => toggleTask(task.id)}
+                                                    onUpload={(e) => handleTaskFileUpload(task.id, e)}
+                                                    onDeleteVersion={handleDeleteVersion}
+                                                    onDeleteTask={() => handleDeleteTask(task.id)}
+                                                    theme={theme}
+                                                    readOnly={isViewingHistory}
+                                                />
+                                            ))}
+                                            {activeStageTasks.filter(task => task.categoryId === selectedCategoryId).length === 0 && (
+                                                <div className="text-xs text-slate-400">该分类暂无条目。</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </section>
+                        </div>
+                    </div>
                 </div>
 
-            </div>
-
-            {aiQuestion && (
-                <div className="fixed bottom-6 right-6 z-40 max-w-md bg-indigo-50 border border-indigo-200 rounded-lg p-6 shadow-2xl animate-bounce-in">
-                    <button
-                        onClick={() => setAiQuestion(null)}
-                        className="absolute top-2 right-2 text-indigo-400 hover:text-indigo-600"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                    </button>
-                    <div className="flex items-start space-x-4">
-                        <div className="bg-indigo-100 p-2 rounded-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                {aiQuestion && (
+                    <div className="fixed bottom-6 right-6 z-40 max-w-md bg-indigo-50 border border-indigo-200 rounded-lg p-6 shadow-2xl animate-bounce-in">
+                        <button
+                            onClick={() => setAiQuestion(null)}
+                            className="absolute top-2 right-2 text-indigo-400 hover:text-indigo-600"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                             </svg>
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-indigo-900 mb-1">AI 流程质检提问</h3>
-                            <p className="text-indigo-800 text-sm">{aiQuestion}</p>
+                        </button>
+                        <div className="flex items-start space-x-4">
+                            <div className="bg-indigo-100 p-2 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-indigo-900 mb-1">AI 流程质检提问</h3>
+                                <p className="text-indigo-800 text-sm">{aiQuestion}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
-    );
+                )}
+            </div>
+        );
+    };
 
     const renderRegulations = () => (
         <div className="h-full flex flex-col bg-slate-50">
@@ -1239,6 +1392,47 @@ const App: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">子项编号</label>
                                         <input type="text" className="w-full border border-slate-100 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-blue-50 outline-none bg-slate-50 font-bold text-sm text-slate-700 transition-all border-transparent focus:border-blue-200" placeholder="Sub-01" value={newProjectData.subCode} onChange={e => setNewProjectData({ ...newProjectData, subCode: e.target.value })} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">子项类型</label>
+                                        <select
+                                            className="w-full border border-slate-100 rounded-2xl px-5 py-4 outline-none bg-slate-50 font-bold text-sm text-slate-700 appearance-none"
+                                            value={newProjectData.type}
+                                            onChange={(e) => handleTemplateSelectionChange(e.target.value as ProjectType, newProjectData.stage)}
+                                        >
+                                            {PROJECT_TYPES.map(type => (
+                                                <option key={type} value={type}>{type}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">设计阶段</label>
+                                        <select
+                                            className="w-full border border-slate-100 rounded-2xl px-5 py-4 outline-none bg-slate-50 font-bold text-sm text-slate-700 appearance-none"
+                                            value={newProjectData.stage}
+                                            onChange={(e) => handleTemplateSelectionChange(newProjectData.type, e.target.value as DesignStage)}
+                                        >
+                                            {DESIGN_STAGES.map(stage => (
+                                                <option key={stage} value={stage}>{stage}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">启用文件分类</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {TEMPLATE_CATEGORIES[newProjectData.type][newProjectData.stage].map(category => (
+                                            <label key={category.id} className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={newProjectData.enabledCategoryIds.includes(category.id)}
+                                                    onChange={() => toggleNewCategory(category.id)}
+                                                />
+                                                {category.name}
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
