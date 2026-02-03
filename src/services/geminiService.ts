@@ -1,5 +1,4 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { TaskCategory } from "../types";
 
 const apiKey = process.env.API_KEY || '';
 // Initialize with API Key
@@ -13,17 +12,17 @@ const OFFLINE_QUESTIONS: Record<string, string[]> = {
       "请检查防火阀的安装位置是否距离墙体表面不大于 200mm？",
       "请复核机房内检修通道宽度是否满足设备更换组件的需求？"
   ],
-  [TaskCategory.LOAD_CALC]: [
-      "围护结构的传热系数是否采用了最新的节能设计标准值？",
-      "人员密度和照明功率密度取值是否符合房间实际功能？"
+  多专业接口: [
+      "多专业边界条件是否已与结构、电气、工艺进行交叉确认？",
+      "是否确认了与其他专业的关键接口变更记录？"
   ],
-  [TaskCategory.SMOKE_CALC]: [
-      "自然排烟窗的有效开启面积是否扣除了窗框和开启角度的影响？",
-      "长走道排烟量的计算是否考虑了防烟分区的划分？"
+  安全与风险控制: [
+      "关键风险工况是否已纳入通风/空调系统方案？",
+      "事故通风路径是否已验证可行性？"
   ],
-  [TaskCategory.HEATING_PIPELINE]: [
-      "高层建筑采暖系统的竖向分区压力是否超过了散热器的承压能力？",
-      "伸缩节的选型是否计算了最不利工况下的热膨胀量？"
+  阶段成果: [
+      "当前阶段成果文件是否包含必要的系统图和计算说明？",
+      "阶段性成果是否已满足审图所需的基本完整度？"
   ]
 };
 
@@ -37,7 +36,7 @@ const OFFLINE_DESIGN_CHECKLIST = `
 5. 节能审查：水泵风机能效比是否满足节能规范限制？
 `;
 
-export const generateWorkflowQuestion = async (category: TaskCategory, customModel?: string): Promise<string> => {
+export const generateWorkflowQuestion = async (category: string, customModel?: string): Promise<string> => {
   try {
     // Check if API key exists, otherwise assume offline immediately
     if (!apiKey) throw new Error("No API Key");
