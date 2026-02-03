@@ -1,0 +1,5 @@
+{
+  "name": "HVAC Design Master (暖通设计管家)",
+  "description": "An internal tool for HVAC designers to manage workflows, ensure compliance with mandatory codes, and avoid common design errors. Features AI-assisted checking and process monitoring.",
+  "requestFramePermissions": []
+}
