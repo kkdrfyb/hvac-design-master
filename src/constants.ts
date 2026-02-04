@@ -294,12 +294,7 @@ export const INITIAL_PROJECTS: MainProject[] = [
         stage: '初步设计',
         stageHistory: [],
         enabledCategoryIds: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id),
-        tasks: buildTasksFromTemplate('附属工业厂房', '初步设计', TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id)),
-        plans: [
-          { id: 'p1', name: '初步设计提交', date: new Date().toISOString().split('T')[0] }
-        ],
-        designInputContent: '1. 室外计算参数按连云港气象参数执行。\n2. 室内设计温度：夏季26±2℃，冬季18±2℃。\n3. 氯气储存间需设置事故通风系统，换气次数不小于12次/h。\n4. 所有通风设备需采用防爆型。',
-        gallery: []
+        tasks: buildTasksFromTemplate('附属工业厂房', '初步设计', TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id))
       }
     ]
   }

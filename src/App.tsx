@@ -1,17 +1,11 @@
 import './index.css';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import * as XLSX from 'xlsx';
 import Sidebar from './components/Sidebar';
-import Calendar from './components/Calendar';
-import Gallery from './components/Gallery';
-import MandatoryClauseModal from './components/MandatoryClauseModal';
-import { ViewState, TaskItem, CommonError, TaskGroup, DesignPlan, MandatoryClause, MainProject, SubProject, SubmissionVersion, ThemeColor, DesignStage, ProjectType, TemplateCategory } from './types';
+import { ViewState, TaskItem, CommonError, TaskGroup, MandatoryClause, MainProject, SubProject, SubmissionVersion, ThemeColor, DesignStage, ProjectType, TemplateCategory } from './types';
 import { INITIAL_PROJECTS, MANDATORY_CLAUSES, COMMON_ERRORS, DESIGN_STAGES, PROJECT_TYPES, TEMPLATE_CATEGORIES, buildTasksFromTemplate } from './constants';
 import { useAuth } from './context/AuthContext';
 import { Auth } from './components/Auth';
 import { api } from './api';
-import { generateWorkflowQuestion, verifyDesignInput } from './services/geminiService';
-import { GoogleGenAI, Chat } from "@google/genai";
 
 // Group mappings
 const GROUP_LABELS: Record<TaskGroup, string> = {
@@ -126,10 +120,7 @@ const ensureValidSubProject = (sp: Partial<SubProject> | any): SubProject => {
             ...t,
             stage: t?.stage || stage,
             versions: Array.isArray(t?.versions) ? t.versions : []
-        })) : buildTasksFromTemplate(type, stage, enabledCategoryIds),
-        plans: Array.isArray(sp?.plans) ? sp.plans : [],
-        designInputContent: sp?.designInputContent || '',
-        gallery: Array.isArray(sp?.gallery) ? sp.gallery : []
+        })) : buildTasksFromTemplate(type, stage, enabledCategoryIds)
     };
 };
 
@@ -202,10 +193,12 @@ const App: React.FC = () => {
 
     const [activeStage, setActiveStage] = useState<DesignStage>(currentSub.stage);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>('overview');
+    const [showEmptyCategories, setShowEmptyCategories] = useState(false);
 
     useEffect(() => {
         setActiveStage(currentSub.stage);
         setSelectedCategoryId('overview');
+        setShowEmptyCategories(false);
     }, [currentSub.id, currentSub.stage]);
 
     useEffect(() => {
@@ -250,29 +243,16 @@ const App: React.FC = () => {
     };
 
     // Mandatory Clauses State
-    const [mandatoryClauses, setMandatoryClauses] = useState<MandatoryClause[]>(MANDATORY_CLAUSES);
+    const [mandatoryClauses] = useState<MandatoryClause[]>(MANDATORY_CLAUSES);
     const [shuffledClauses, setShuffledClauses] = useState<MandatoryClause[]>([]); // All clauses, shuffled
-    const [showModal, setShowModal] = useState<boolean>(true);
     const [clauseSearch, setClauseSearch] = useState('');
     const [displayCount, setDisplayCount] = useState(4);
 
     // Common Errors State
-    const [errors, setErrors] = useState<CommonError[]>(COMMON_ERRORS);
+    const [errors] = useState<CommonError[]>(COMMON_ERRORS);
     const [shuffledErrors, setShuffledErrors] = useState<CommonError[]>([]); // All errors, shuffled
     const [errorSearch, setErrorSearch] = useState('');
     const [errorDisplayCount, setErrorDisplayCount] = useState(4);
-
-    // AI State
-    const [aiQuestion, setAiQuestion] = useState<string | null>(null);
-    const [loadingAi, setLoadingAi] = useState(false);
-    const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
-    const [userInput, setUserInput] = useState('');
-    const [customModelName, setCustomModelName] = useState('gemini-2.5-flash');
-
-    // Chat State
-    const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'model', text: string }[]>([]);
-    const [chatInput, setChatInput] = useState('');
-    const chatSessionRef = useRef<Chat | null>(null);
 
     // Modals State
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -286,17 +266,10 @@ const App: React.FC = () => {
         enabledCategoryIds: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id)
     });
 
-    const [showImportSettingsModal, setShowImportSettingsModal] = useState(false);
-    const [importSelection, setImportSelection] = useState({ mainId: '', subId: '' });
-
     // Add Task Modal State (Replaces Prompt)
     const [addTaskModalOpen, setAddTaskModalOpen] = useState(false);
     const [addTaskParams, setAddTaskParams] = useState<{ group: TaskGroup, category: string, categoryId: string } | null>(null);
     const [newTaskContent, setNewTaskContent] = useState('');
-
-    // Manual Plan Entry State
-    const [newPlanEntry, setNewPlanEntry] = useState({ date: '', name: '' });
-    const [showPlanEntry, setShowPlanEntry] = useState(false);
 
     // --- Effects ---
 
@@ -305,15 +278,6 @@ const App: React.FC = () => {
         refreshRandomClauses();
         refreshRandomErrors();
     }, []); // Run once on mount
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (!aiQuestion && currentView === 'dashboard' && Math.random() > 0.8) {
-                handleGenerateQuestion();
-            }
-        }, 60000);
-        return () => clearInterval(interval);
-    }, [aiQuestion, currentView]);
 
     // --- Handlers ---
 
@@ -343,31 +307,6 @@ const App: React.FC = () => {
         return shuffledErrors.slice(0, errorDisplayCount);
     }, [errorSearch, shuffledErrors, errorDisplayCount, errors]);
 
-    const downloadTemplate = (type: 'plan' | 'input') => {
-        let content = "";
-        let filename = "";
-        let mimeType = "text/plain";
-
-        if (type === 'plan') {
-            content = "Date,Milestone\n2024-06-01,Preliminary Design\n2024-07-01,Construction Drawings";
-            filename = "Plan_Template.csv"; // Using CSV for Excel compatibility
-            mimeType = "text/csv";
-        } else {
-            content = "Design Input Template\n\n1. Outdoor Parameters:\n2. Indoor Parameters:\n3. Special Requirements:";
-            filename = "Design_Input_Template.txt";
-        }
-
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
     const handleCreateProject = () => {
         if (newProjectData.mainName && newProjectData.subName) {
             const enabledCategoryIds = newProjectData.enabledCategoryIds.length
@@ -381,10 +320,7 @@ const App: React.FC = () => {
                 stage: newProjectData.stage,
                 stageHistory: [],
                 enabledCategoryIds,
-                tasks: buildTasksFromTemplate(newProjectData.type, newProjectData.stage, enabledCategoryIds),
-                plans: [],
-                designInputContent: '请导入设计输入或在此编辑...',
-                gallery: []
+                tasks: buildTasksFromTemplate(newProjectData.type, newProjectData.stage, enabledCategoryIds)
             };
             const existingMain = projects.find(p => p.name === newProjectData.mainName);
             if (existingMain) {
@@ -442,67 +378,6 @@ const App: React.FC = () => {
         });
     };
 
-    const handleImportSettings = () => {
-        const { mainId, subId } = importSelection;
-        const sourceMain = projects.find(p => p.id === mainId);
-        const sourceSub = sourceMain?.subProjects?.find(s => s.id === subId);
-
-        if (sourceSub) {
-            updateCurrentSubProject(sp => ({
-                ...sp,
-                enabledCategoryIds: [...new Set([...(sp.enabledCategoryIds || []), ...(sourceSub.enabledCategoryIds || [])])],
-                // Import tasks (only if not duplicated)
-                tasks: [
-                    ...(sp.tasks || []),
-                    ...(sourceSub.tasks || [])
-                        .filter(t => !sp.tasks?.some(ct => ct.content === t.content && ct.category === t.category && ct.stage === t.stage))
-                        .map(t => ({ ...t, id: `imported_${Date.now()}_${t.id}`, isCompleted: false, versions: [] }))
-                ]
-            }));
-            setShowImportSettingsModal(false);
-        }
-    };
-
-    const handleManualPlanAdd = () => {
-        if (newPlanEntry.date && newPlanEntry.name) {
-            updateCurrentSubProject(sp => ({
-                ...sp,
-                plans: [...sp.plans, { id: `mp_${Date.now()}`, date: newPlanEntry.date, name: newPlanEntry.name }]
-            }));
-            setNewPlanEntry({ date: '', name: '' });
-            setShowPlanEntry(false);
-        }
-    };
-
-    const handleGenerateQuestion = async () => {
-        setLoadingAi(true);
-        try {
-            const categories = Array.from(new Set(activeStageTasks.map(t => t.category)));
-            const randomCat = categories[Math.floor(Math.random() * categories.length)] || '设计流程';
-            const question = await generateWorkflowQuestion(randomCat, customModelName);
-            setAiQuestion(question);
-        } catch (e) {
-            console.error('AI question generation failed', e);
-            setAiQuestion("AI 助手暂时无法生成问题，请检查网络或稍后重试。");
-        } finally {
-            setLoadingAi(false);
-        }
-    };
-
-    const handleAiAnalysis = async () => {
-        if (!userInput.trim()) return;
-        setLoadingAi(true);
-        try {
-            const result = await verifyDesignInput(userInput, customModelName);
-            setAiAnalysis(result);
-        } catch (e) {
-            console.error('AI analysis failed', e);
-            setAiAnalysis("AI 分析遇到了错误，请稍后再试。");
-        } finally {
-            setLoadingAi(false);
-        }
-    };
-
     const toggleTask = (id: string) => {
         if (activeStage !== currentSub.stage) return;
         updateCurrentSubProject(sp => ({
@@ -519,63 +394,6 @@ const App: React.FC = () => {
                 tasks: sp.tasks.filter(t => t.id !== taskId)
             }));
         }
-    };
-
-    const planFileInputRef = useRef<HTMLInputElement>(null);
-    const inputFileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const bstr = evt.target?.result;
-            const wb = XLSX.read(bstr, { type: 'binary' });
-            const wsname = wb.SheetNames?.[0];
-            if (!wsname) return;
-            const ws = wb.Sheets[wsname];
-            if (!ws) return;
-            const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
-            const newPlans: DesignPlan[] = [];
-            for (let i = 1; i < data.length; i++) {
-                const row = data[i];
-                if (row.length >= 2) {
-                    let dateStr = row[0];
-                    if (typeof dateStr === 'number') {
-                        const dateObj = new Date(Math.round((dateStr - 25569) * 86400 * 1000));
-                        dateStr = dateObj.toISOString().split('T')[0];
-                    }
-                    const name = row[1];
-                    if (dateStr && name) {
-                        newPlans.push({
-                            id: `p_${Date.now()}_${i}`,
-                            date: String(dateStr).trim(),
-                            name: String(name)
-                        });
-                    }
-                }
-            }
-            updateCurrentSubProject(sp => ({ ...sp, plans: [...sp.plans, ...newPlans] }));
-        };
-        reader.readAsBinaryString(file);
-        if (planFileInputRef.current) planFileInputRef.current.value = '';
-    };
-
-    const handleDesignInputImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            let content = "";
-            if (file.name.endsWith('.txt')) {
-                content = evt.target?.result as string;
-            } else {
-                content = `[系统提示] 已导入文件: ${file.name}。\n请在此处梳理关键设计输入信息...`;
-            }
-            updateCurrentSubProject(sp => ({ ...sp, designInputContent: sp.designInputContent + '\n\n' + content }));
-        };
-        reader.readAsText(file);
-        if (inputFileInputRef.current) inputFileInputRef.current.value = '';
     };
 
     const handleTaskFileUpload = (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -651,35 +469,6 @@ const App: React.FC = () => {
         setAddTaskParams(null);
     };
 
-    const handleChatSend = async () => {
-        if (!chatInput.trim()) return;
-        const userMsg = chatInput;
-        setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-        setChatInput('');
-        setLoadingAi(true);
-
-        try {
-            if (!chatSessionRef.current) {
-                const apiKey = process.env.API_KEY || '';
-                if (!apiKey) throw new Error("API Key is missing");
-                const ai = new GoogleGenAI({ apiKey });
-                chatSessionRef.current = ai.chats.create({
-                    model: customModelName,
-                    config: {
-                        systemInstruction: "You are a helpful and expert HVAC assistant."
-                    }
-                });
-            }
-            const result = await chatSessionRef.current.sendMessage({ message: userMsg });
-            setChatMessages(prev => [...prev, { role: 'model', text: result.text || "No response." }]);
-        } catch (e) {
-            setChatMessages(prev => [...prev, { role: 'model', text: "Error connecting to AI." }]);
-            console.error(e);
-        } finally {
-            setLoadingAi(false);
-        }
-    };
-
     const renderDashboard = () => {
         const isViewingHistory = activeStage !== currentSub.stage;
         const stageOptions = Array.from(new Set([currentSub.stage, ...currentSub.stageHistory]))
@@ -690,6 +479,7 @@ const App: React.FC = () => {
             return { ...template, task };
         });
         const nextStage = DESIGN_STAGES[DESIGN_STAGES.indexOf(currentSub.stage) + 1];
+        const hasCategoryRecords = (categoryId: string) => activeStageTasks.some(task => task.categoryId === categoryId && task.versions.length > 0);
 
         const handleStageAdvance = () => {
             if (!nextStage) return;
@@ -743,22 +533,19 @@ const App: React.FC = () => {
                                 >
                                     阶段切换
                                 </button>
-                                <button onClick={() => setShowImportSettingsModal(true)} className={`text-xs px-2 py-1 rounded bg-${theme}-100 text-${theme}-700 hover:bg-${theme}-200 transition shadow-sm`}>
-                                    ⚙️ 导入项目配置
-                                </button>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {(Object.keys(GROUP_LABELS) as TaskGroup[]).map(group => {
-                                const tasks = activeStageTasks.filter(t => t.group === group);
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                            {enabledCategories.map(category => {
+                                const tasks = activeStageTasks.filter(t => t.categoryId === category.id);
                                 const progress = tasks.length ? Math.round((tasks.filter(t => t.isCompleted).length / tasks.length) * 100) : 0;
                                 return (
                                     <div
-                                        key={group}
+                                        key={category.id}
                                         className={`bg-white p-3 rounded-lg shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-md hover:border-${theme}-300`}
                                     >
-                                        <div className="text-xs font-medium text-slate-500 mb-1 truncate">{GROUP_LABELS[group]}</div>
+                                        <div className="text-xs font-medium text-slate-500 mb-1 truncate">{category.name}</div>
                                         <div className={`text-2xl font-bold text-${theme}-700`}>{progress}%</div>
                                         <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
                                             <div className={`bg-${theme}-500 h-1.5 rounded-full transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
@@ -786,11 +573,14 @@ const App: React.FC = () => {
                                 {(Object.keys(GROUP_LABELS) as TaskGroup[]).map(group => {
                                     const groupCategories = enabledCategories.filter(category => category.group === group);
                                     if (groupCategories.length === 0) return null;
+                                    const visibleCategories = showEmptyCategories
+                                        ? groupCategories
+                                        : groupCategories.filter(category => hasCategoryRecords(category.id));
                                     return (
                                         <div key={group} className="space-y-2">
                                             <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{GROUP_LABELS[group]}</div>
                                             <div className="space-y-1">
-                                                {groupCategories.map(category => {
+                                                {visibleCategories.map(category => {
                                                     const taskCount = activeStageTasks.filter(task => task.categoryId === category.id).length;
                                                     return (
                                                         <button
@@ -806,10 +596,19 @@ const App: React.FC = () => {
                                                         </button>
                                                     );
                                                 })}
+                                                {visibleCategories.length === 0 && (
+                                                    <div className="px-3 py-2 text-[10px] text-slate-400">暂无文件记录</div>
+                                                )}
                                             </div>
                                         </div>
                                     );
                                 })}
+                                <button
+                                    onClick={() => setShowEmptyCategories(prev => !prev)}
+                                    className="w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold text-slate-400 hover:bg-slate-50"
+                                >
+                                    {showEmptyCategories ? '收起未记录分类' : '显示未记录分类'}
+                                </button>
                                 <div className="pt-4 border-t border-slate-100 space-y-2">
                                     <button
                                         onClick={() => setCurrentView('regulations')}
@@ -864,51 +663,13 @@ const App: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <h3 className="font-bold text-slate-700">项目日历</h3>
-                                                    <div className="flex gap-2 items-center">
-                                                        <button onClick={() => setShowPlanEntry(!showPlanEntry)} className={`text-xs text-${theme}-600 font-bold border border-${theme}-200 px-1 rounded hover:bg-${theme}-50`} title="手动添加">+添加</button>
-                                                        <button onClick={() => downloadTemplate('plan')} className={`text-xs text-${theme}-600 hover:underline`} title="下载模版">⬇</button>
-                                                        <button onClick={() => planFileInputRef.current?.click()} className={`text-xs text-${theme}-600 hover:underline`}>导入</button>
-                                                    </div>
-                                                    <input type="file" ref={planFileInputRef} onChange={handleExcelImport} accept=".xlsx, .xls" className="hidden" />
-                                                </div>
-
-                                                {showPlanEntry && (
-                                                    <div className="p-3 bg-yellow-50 border-b border-yellow-100 animate-fade-in">
-                                                        <input type="date" className="w-full border p-1 rounded mb-1 text-xs" value={newPlanEntry.date} onChange={e => setNewPlanEntry({ ...newPlanEntry, date: e.target.value })} />
-                                                        <input type="text" placeholder="里程碑名称" className="w-full border p-1 rounded mb-2 text-xs" value={newPlanEntry.name} onChange={e => setNewPlanEntry({ ...newPlanEntry, name: e.target.value })} />
-                                                        <div className="flex justify-end gap-2">
-                                                            <button onClick={() => setShowPlanEntry(false)} className="text-xs text-slate-500">取消</button>
-                                                            <button onClick={handleManualPlanAdd} className="text-xs bg-blue-600 text-white px-2 py-1 rounded">确认</button>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <Calendar plans={currentSub.plans} />
-                                                <div className="p-3 text-xs text-slate-500 border-t border-slate-100">
-                                                    提示：悬停在标记日期上查看里程碑。
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm">
-                                                <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                                                    <h3 className="font-bold text-slate-700">设计输入提要</h3>
-                                                    <div className="flex gap-2">
-                                                        <button onClick={() => downloadTemplate('input')} className={`text-xs text-${theme}-600 hover:underline`} title="下载模版">⬇ 模版</button>
-                                                        <button onClick={() => inputFileInputRef.current?.click()} className={`text-xs text-${theme}-600 hover:underline`}>导入输入</button>
-                                                    </div>
-                                                    <input type="file" ref={inputFileInputRef} onChange={handleDesignInputImport} accept=".txt, .doc, .docx" className="hidden" />
-                                                </div>
-                                                <textarea
-                                                    className="flex-1 w-full p-3 text-sm text-slate-700 resize-none focus:outline-none"
-                                                    value={currentSub.designInputContent}
-                                                    onChange={(e) => updateCurrentSubProject(sp => ({ ...sp, designInputContent: e.target.value }))}
-                                                    placeholder="在此处梳理关键设计输入..."
-                                                />
-                                            </div>
+                                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                            <h3 className="font-bold text-slate-700 mb-3">完成度说明</h3>
+                                            <ul className="text-xs text-slate-500 space-y-2">
+                                                <li>完成度仅统计当前阶段已启用的一级分类。</li>
+                                                <li>二级条目由设计人员手动勾选完成状态。</li>
+                                                <li>历史阶段仅供查看，不计入当前阶段完成度。</li>
+                                            </ul>
                                         </div>
                                     </div>
                                 ) : (
@@ -955,29 +716,6 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                {aiQuestion && (
-                    <div className="fixed bottom-6 right-6 z-40 max-w-md bg-indigo-50 border border-indigo-200 rounded-lg p-6 shadow-2xl animate-bounce-in">
-                        <button
-                            onClick={() => setAiQuestion(null)}
-                            className="absolute top-2 right-2 text-indigo-400 hover:text-indigo-600"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                        </button>
-                        <div className="flex items-start space-x-4">
-                            <div className="bg-indigo-100 p-2 rounded-full">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-indigo-900 mb-1">AI 流程质检提问</h3>
-                                <p className="text-indigo-800 text-sm">{aiQuestion}</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         );
     };
@@ -986,7 +724,7 @@ const App: React.FC = () => {
         <div className="h-full flex flex-col bg-slate-50">
             <div className="bg-white px-6 py-4 shadow-sm border-b border-slate-200 z-10 flex flex-col gap-4">
                 <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-slate-800">强制性条文库</h2>
+                    <h2 className="text-2xl font-bold text-slate-800">规范条文</h2>
                 </div>
                 <div className="flex gap-4 items-center">
                     <div className="flex-1 relative">
@@ -1043,7 +781,7 @@ const App: React.FC = () => {
         <div className="h-full flex flex-col bg-slate-50">
             <div className="bg-white px-6 py-4 shadow-sm border-b border-slate-200 z-10 flex flex-col gap-4">
                 <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-slate-800">常见错误预警</h2>
+                    <h2 className="text-2xl font-bold text-slate-800">设计常见问题</h2>
                 </div>
                 <div className="flex gap-4 items-center">
                     <div className="flex-1 relative">
@@ -1096,53 +834,6 @@ const App: React.FC = () => {
                 {displayedErrors.length === 0 && (
                     <div className="text-center py-20 text-slate-400">未找到相关预警</div>
                 )}
-            </div>
-        </div>
-    );
-
-    const renderAiAssistant = () => (
-        <div className="h-full flex flex-col p-6 max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">AI 辅助设计助手</h2>
-            <div className="flex-1 bg-white rounded-lg shadow-inner border border-slate-200 p-4 overflow-y-auto space-y-4 mb-4">
-                {chatMessages.length === 0 && (
-                    <div className="text-center text-slate-400 mt-10">
-                        <p>请描述您的设计问题，例如：</p>
-                        <ul className="mt-2 space-y-1 text-sm">
-                            <li>"如何确定排烟风机的风量？"</li>
-                            <li>"帮我检查这段设计说明是否符合规范..."</li>
-                        </ul>
-                    </div>
-                )}
-                {chatMessages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-800'}`}>
-                            <p className="whitespace-pre-wrap text-sm">{msg.text}</p>
-                        </div>
-                    </div>
-                ))}
-                {loadingAi && (
-                    <div className="flex justify-start">
-                        <div className="bg-slate-50 text-slate-500 rounded-lg p-3">
-                            Thinking...
-                        </div>
-                    </div>
-                )}
-            </div>
-            <div className="flex gap-2">
-                <input
-                    className="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    placeholder="输入问题..."
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleChatSend()}
-                />
-                <button
-                    onClick={handleChatSend}
-                    disabled={loadingAi}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                    发送
-                </button>
             </div>
         </div>
     );
@@ -1203,11 +894,9 @@ const App: React.FC = () => {
                         <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-2 mb-4 block">功能菜单</label>
                         <div className="space-y-1">
                             {[
-                                { id: 'dashboard', label: '项目看板', icon: '📊' },
-                                { id: 'regulations', label: '规范库', icon: '📜' },
-                                { id: 'errors', label: '常见错误', icon: '❌' },
-                                { id: 'gallery', label: '图库', icon: '🖼️' },
-                                { id: 'ai-assistant', label: 'AI 助手', icon: '🤖' }
+                                { id: 'dashboard', label: '子项主页', icon: '📋' },
+                                { id: 'regulations', label: '规范条文', icon: '📜' },
+                                { id: 'errors', label: '设计常见问题', icon: '❗' }
                             ].map(item => (
                                 <button
                                     key={item.id}
@@ -1249,10 +938,8 @@ const App: React.FC = () => {
                             <span className={`text-${theme}-600`}>{currentSub.name}</span>
                         </div>
                         <h2 className="text-xl font-black text-slate-800 tracking-tight mt-0.5">
-                            {currentView === 'dashboard' ? '设计流程监控' :
-                                currentView === 'regulations' ? '强制性条文库' :
-                                    currentView === 'errors' ? '常见差错库' :
-                                        currentView === 'gallery' ? '设计大样图库' : 'AI 智能助手'}
+                            {currentView === 'dashboard' ? '子项主页' :
+                                currentView === 'regulations' ? '规范条文' : '设计常见问题'}
                         </h2>
                     </div>
 
@@ -1281,26 +968,6 @@ const App: React.FC = () => {
                             {currentView === 'dashboard' && renderDashboard()}
                             {currentView === 'regulations' && renderRegulations()}
                             {currentView === 'errors' && renderErrors()}
-                            {currentView === 'gallery' && (
-                                <Gallery
-                                    theme={theme}
-                                    items={currentSub.gallery}
-                                    onAdd={(files) => {
-                                        const newItems = files.map((f, i) => ({
-                                            id: `g_${Date.now()}_${i}`,
-                                            title: f.title,
-                                            drawingNumber: f.drawingNumber,
-                                            url: URL.createObjectURL(f.file),
-                                            category: 'general',
-                                            uploadDate: new Date().toLocaleDateString(),
-                                            type: f.file.type === 'application/pdf' ? 'pdf' : 'image' as any
-                                        }));
-                                        updateCurrentSubProject(sp => ({ ...sp, gallery: [...sp.gallery, ...newItems] }));
-                                    }}
-                                    onRemove={(id) => updateCurrentSubProject(sp => ({ ...sp, gallery: sp.gallery.filter(g => g.id !== id) }))}
-                                />
-                            )}
-                            {currentView === 'ai-assistant' && renderAiAssistant()}
                         </div>
                     </div>
                 </div>
@@ -1312,9 +979,10 @@ const App: React.FC = () => {
                     <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-10 animate-in zoom-in-95 duration-300 border border-white/20">
                         <div className="mb-8">
                             <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-tight">启动新工程</h3>
-                            <p className="text-slate-400 text-sm font-bold mt-2">定义全新的主项目与协同子项</p>
+                            <p className="text-slate-400 text-sm font-bold mt-2">按步骤完成项目创建：项目 → 子项 → 阶段 → 模板</p>
                         </div>
                         <div className="space-y-6">
+                            <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">步骤 1：项目基本信息</div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">项目名称</label>
@@ -1326,6 +994,7 @@ const App: React.FC = () => {
                                 </div>
                             </div>
                             <div className="pt-6 border-t border-slate-50 space-y-6">
+                                <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">步骤 2：子项基本信息</div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">首个子项/单体</label>
@@ -1338,7 +1007,7 @@ const App: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">子项类型</label>
+                                        <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">步骤 3：子项类型</label>
                                         <select
                                             className="w-full border border-slate-100 rounded-2xl px-5 py-4 outline-none bg-slate-50 font-bold text-sm text-slate-700 appearance-none"
                                             value={newProjectData.type}
@@ -1350,7 +1019,7 @@ const App: React.FC = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">设计阶段</label>
+                                        <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">当前设计阶段</label>
                                         <select
                                             className="w-full border border-slate-100 rounded-2xl px-5 py-4 outline-none bg-slate-50 font-bold text-sm text-slate-700 appearance-none"
                                             value={newProjectData.stage}
@@ -1363,7 +1032,7 @@ const App: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="space-y-3">
-                                    <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">启用文件分类</label>
+                                    <label className="block text-[10px] font-black text-slate-300 uppercase tracking-widest pl-1">步骤 4：启用文件分类</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {TEMPLATE_CATEGORIES[newProjectData.type][newProjectData.stage].map(category => (
                                             <label key={category.id} className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
@@ -1382,56 +1051,6 @@ const App: React.FC = () => {
                         <div className="mt-12 flex items-center justify-between">
                             <button onClick={() => setShowNewProjectModal(false)} className="px-6 py-4 text-slate-400 font-black hover:text-slate-600 transition tracking-widest uppercase text-xs">放弃</button>
                             <button onClick={handleCreateProject} className={`px-10 py-4 bg-${theme}-600 text-white font-black rounded-3xl shadow-2xl shadow-${theme}-200 hover:bg-${theme}-700 hover:-translate-y-1 transition active:translate-y-0 text-sm`}>开启设计</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Import Settings Modal */}
-            {showImportSettingsModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full p-10 animate-scale-in">
-                        <h3 className="text-3xl font-black text-slate-800 mb-2 tracking-tight">配置一键同步</h3>
-                        <p className="text-sm text-slate-400 font-bold mb-10">快速从历史优选工程中复用任务模版</p>
-
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-2 gap-5">
-                                <div className="space-y-2">
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">来源工程</label>
-                                    <select
-                                        className="w-full border border-slate-100 rounded-2xl px-5 py-4 outline-none focus:ring-4 focus:ring-blue-50 bg-slate-50 font-bold text-sm text-slate-700 appearance-none transition-all cursor-pointer"
-                                        onChange={(e) => setImportSelection(prev => ({ ...prev, mainId: e.target.value, subId: '' }))}
-                                        value={importSelection.mainId}
-                                    >
-                                        <option value="">请选择项目</option>
-                                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">来源子项</label>
-                                    <select
-                                        className="w-full border border-slate-100 rounded-2xl px-5 py-4 outline-none focus:ring-4 focus:ring-blue-50 bg-slate-50 font-bold text-sm text-slate-700 appearance-none transition-all cursor-pointer disabled:opacity-30"
-                                        onChange={(e) => setImportSelection(prev => ({ ...prev, subId: e.target.value }))}
-                                        value={importSelection.subId}
-                                        disabled={!importSelection.mainId}
-                                    >
-                                        <option value="">请选择子项</option>
-                                        {projects.find(p => p.id === importSelection.mainId)?.subProjects.map(sp => (
-                                            <option key={sp.id} value={sp.id}>{sp.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="bg-blue-50/50 p-6 rounded-[2rem] flex gap-4 border border-blue-100/50">
-                                <span className="text-2xl">💡</span>
-                                <p className="text-sm text-blue-800/80 leading-relaxed font-bold">
-                                    导入后将同步目标工程的所有<b>收发提资分类</b>与<b>任务清单</b>，现有子项的配置将被按需补充。
-                                </p>
-                            </div>
-                        </div>
-                        <div className="mt-12 flex items-center justify-between">
-                            <button onClick={() => setShowImportSettingsModal(false)} className="px-6 py-4 text-slate-400 font-black hover:text-slate-600 transition tracking-widest uppercase text-xs">取消操作</button>
-                            <button onClick={handleImportSettings} className={`px-10 py-4 bg-${theme}-600 text-white font-black rounded-3xl shadow-2xl shadow-${theme}-200 hover:bg-${theme}-700 transition ${!importSelection.subId ? 'opacity-30 cursor-not-allowed' : ''}`} disabled={!importSelection.subId}>开始同步</button>
                         </div>
                     </div>
                 </div>
@@ -1470,8 +1089,6 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            {/* Global Modals */}
-            {showModal && <MandatoryClauseModal onClose={() => setShowModal(false)} />}
         </div>
     );
 };

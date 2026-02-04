@@ -57,22 +57,6 @@ export interface CommonError {
   category: string;
 }
 
-export interface DesignPlan {
-  id: string;
-  name: string; // Milestone content
-  date: string; // Date string YYYY-MM-DD
-}
-
-export interface GalleryItem {
-  id: string;
-  title: string;
-  drawingNumber?: string; // New field
-  url: string; // base64 or object url
-  category: string;
-  uploadDate: string;
-  type: 'image' | 'pdf'; // New field
-}
-
 export interface SubProject {
   id: string;
   name: string;
@@ -82,9 +66,6 @@ export interface SubProject {
   stageHistory: DesignStage[];
   enabledCategoryIds: string[];
   tasks: TaskItem[];
-  plans: DesignPlan[];
-  designInputContent: string; // Rich text/long text content
-  gallery: GalleryItem[];
 }
 
 export interface MainProject {
@@ -94,6 +75,6 @@ export interface MainProject {
   subProjects: SubProject[];
 }
 
-export type ViewState = 'dashboard' | 'regulations' | 'errors' | 'ai-assistant' | 'gallery';
+export type ViewState = 'dashboard' | 'regulations' | 'errors';
 
 export type ThemeColor = 'blue' | 'emerald' | 'rose' | 'violet';
