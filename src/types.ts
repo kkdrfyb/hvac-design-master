@@ -2,7 +2,9 @@ export type DesignStage = '方案设计' | '初步设计' | '施工图设计';
 
 export type ProjectType = '核岛厂房' | '附属工业厂房' | '其他';
 
-export type TaskGroup = 'INTERFACE' | 'RISK' | 'DELIVERABLE';
+export type TaskGroup = 'INTERNAL' | 'INTERFACE' | 'RISK' | 'DELIVERABLE' | 'EQUIPMENT_REVIEW';
+
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
 
 export interface SubmissionFile {
   id?: string;
@@ -19,6 +21,23 @@ export interface SubmissionVersion {
   version: string; // A, B, C...
   date: string;
   files: SubmissionFile[];
+}
+
+export interface TaskComment {
+  id: string;
+  content: string;
+  author: string;
+  createdAt: string;
+}
+
+export interface OperationLog {
+  id: string;
+  action: string;
+  actor: string;
+  createdAt: string;
+  targetType: 'stage' | 'task' | 'file' | 'comment';
+  targetId: string;
+  detail?: string;
 }
 
 export interface TemplateItem {
@@ -44,8 +63,10 @@ export interface TaskItem {
   group: TaskGroup;
   stage: DesignStage;
   content: string;
-  isCompleted: boolean;
+  status: TaskStatus;
+  blockedReason?: string;
   versions: SubmissionVersion[]; // Support multiple versions with multiple files
+  comments: TaskComment[];
 }
 
 export interface MandatoryClause {
@@ -72,6 +93,7 @@ export interface SubProject {
   stageHistory: DesignStage[];
   enabledCategoryIds: string[];
   tasks: TaskItem[];
+  operationLogs: OperationLog[];
 }
 
 export interface MainProject {

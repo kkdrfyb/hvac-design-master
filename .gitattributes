@@ -1,0 +1,13 @@
+# 所有文件统一使用LF换行符，禁止自动转换
+* text=auto eol=lf
+
+# 针对Windows特有文件单独配置（如批处理文件需要CRLF）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制文件（如数据库、图片）不做换行符处理
+*.db binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary

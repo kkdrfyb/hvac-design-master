@@ -1,11 +1,13 @@
-import React from 'react';
-import { MainProject, SubProject, TaskGroup, TaskItem, ThemeColor, DesignStage, TemplateCategory, SubmissionFile } from '../../types';
+import React, { useState } from 'react';
+import { MainProject, SubProject, TaskGroup, TaskItem, ThemeColor, DesignStage, TemplateCategory, SubmissionFile, TaskStatus } from '../../types';
 import TaskRow from './TaskRow';
 
 const GROUP_LABELS: Record<TaskGroup, string> = {
+  INTERNAL: '专业内部设计',
   INTERFACE: '多专业接口',
   RISK: '安全与风险控制',
   DELIVERABLE: '阶段成果',
+  EQUIPMENT_REVIEW: '设备审查',
 };
 
 interface MinimalTaskView {
@@ -30,12 +32,19 @@ interface DashboardViewProps {
   nextStage?: DesignStage;
   onChangeStage: (stage: DesignStage) => void;
   onAdvanceStage: () => void;
+  onExportCurrentStage: () => void;
+  onExportProject: () => void;
   onSelectCategory: (categoryId: string) => void;
   onToggleShowEmptyCategories: () => void;
   onOpenRegulations: () => void;
   onOpenErrors: () => void;
   onToggleTask: (taskId: string) => void;
+  onChangeTaskStatus: (taskId: string, status: TaskStatus) => void;
+  onChangeTaskBlockedReason: (taskId: string, blockedReason: string) => void;
+  onAddTaskComment: (taskId: string, content: string) => void;
   onUploadTaskFile: (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRetryTaskUpload: (taskId: string) => void;
+  uploadErrors: Record<string, string>;
   onDownloadFile: (file: SubmissionFile) => void;
   onDeleteVersion: (taskId: string, version: string) => void;
   onDeleteTask: (taskId: string) => void;
@@ -57,30 +66,52 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   nextStage,
   onChangeStage,
   onAdvanceStage,
+  onExportCurrentStage,
+  onExportProject,
   onSelectCategory,
   onToggleShowEmptyCategories,
   onOpenRegulations,
   onOpenErrors,
   onToggleTask,
+  onChangeTaskStatus,
+  onChangeTaskBlockedReason,
+  onAddTaskComment,
   onUploadTaskFile,
+  onRetryTaskUpload,
+  uploadErrors,
   onDownloadFile,
   onDeleteVersion,
   onDeleteTask,
   onOpenAddTaskModal,
 }) => {
+  const [expandedGroups, setExpandedGroups] = useState<Record<TaskGroup, boolean>>({
+    INTERNAL: true,
+    INTERFACE: true,
+    RISK: true,
+    DELIVERABLE: true,
+    EQUIPMENT_REVIEW: true,
+  });
+  const [compareStage, setCompareStage] = useState<DesignStage | ''>('');
+
   const hasCategoryRecords = (categoryId: string) =>
     activeStageTasks.some(task => task.categoryId === categoryId && task.versions.length > 0);
+
+  const historyStages = stageOptions.filter(stage => stage !== currentSub.stage);
+  const currentStageStats = currentSub.tasks.filter(t => t.stage === currentSub.stage);
+  const compareStageStats = compareStage ? currentSub.tasks.filter(t => t.stage === compareStage) : [];
+  const pct = (list: TaskItem[]) => (list.length ? Math.round((list.filter(t => t.status === 'COMPLETED').length / list.length) * 100) : 0);
+  const operationLogs = (currentSub.operationLogs || []).slice(0, 12);
 
   return (
     <div className="flex gap-6 h-full overflow-hidden">
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-shrink-0 bg-slate-50 z-10 pb-4 pr-2 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs text-slate-500">
+            <div className="space-y-0.5">
+              <p className="text-xs leading-5 text-slate-500">
                 项目：{currentMain.name}（{currentMain.code}）
               </p>
-              <p className="text-sm font-bold text-slate-700">
+              <p className="text-sm leading-5 font-bold text-slate-700">
                 子项：{currentSub.name}（{currentSub.code}）
               </p>
             </div>
@@ -107,13 +138,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               >
                 阶段切换
               </button>
+              <button
+                onClick={onExportCurrentStage}
+                className="px-3 py-2 text-xs rounded-lg font-bold bg-slate-100 text-slate-700 hover:bg-slate-200"
+              >
+                导出当前阶段
+              </button>
+              <button
+                onClick={onExportProject}
+                className="px-3 py-2 text-xs rounded-lg font-bold bg-slate-800 text-white hover:bg-slate-900"
+              >
+                导出整项目
+              </button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {enabledCategories.map(category => {
               const tasks = activeStageTasks.filter(t => t.categoryId === category.id);
-              const progress = tasks.length ? Math.round((tasks.filter(t => t.isCompleted).length / tasks.length) * 100) : 0;
+              const progress = tasks.length ? Math.round((tasks.filter(t => t.status === 'COMPLETED').length / tasks.length) * 100) : 0;
               return (
                 <div
                   key={category.id}
@@ -145,25 +188,35 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 const groupCategories = enabledCategories.filter(category => category.group === group);
                 if (groupCategories.length === 0) return null;
                 const visibleCategories = showEmptyCategories ? groupCategories : groupCategories.filter(category => hasCategoryRecords(category.id));
+                const expanded = expandedGroups[group];
                 return (
                   <div key={group} className="space-y-2">
-                    <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{GROUP_LABELS[group]}</div>
-                    <div className="space-y-1">
-                      {visibleCategories.map(category => {
-                        const taskCount = activeStageTasks.filter(task => task.categoryId === category.id).length;
-                        return (
-                          <button
-                            key={category.id}
-                            onClick={() => onSelectCategory(category.id)}
-                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${selectedCategoryId === category.id ? `bg-${theme}-50 text-${theme}-700 border border-${theme}-100` : 'text-slate-500 hover:bg-slate-50'}`}
-                          >
-                            <span className="truncate">{category.name}</span>
-                            <span className="ml-2 text-[10px] text-slate-400">({taskCount})</span>
-                          </button>
-                        );
-                      })}
-                      {visibleCategories.length === 0 && <div className="px-3 py-2 text-[10px] text-slate-400">暂无文件记录</div>}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }))}
+                      className="w-full flex items-center justify-between text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-slate-500"
+                    >
+                      <span>{GROUP_LABELS[group]}</span>
+                      <span>{expanded ? '▾' : '▸'}</span>
+                    </button>
+                    {expanded && (
+                      <div className="space-y-1">
+                        {visibleCategories.map(category => {
+                          const taskCount = activeStageTasks.filter(task => task.categoryId === category.id).length;
+                          return (
+                            <button
+                              key={category.id}
+                              onClick={() => onSelectCategory(category.id)}
+                              className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${selectedCategoryId === category.id ? `bg-${theme}-50 text-${theme}-700 border border-${theme}-100` : 'text-slate-500 hover:bg-slate-50'}`}
+                            >
+                              <span className="truncate">{category.name}</span>
+                              <span className="ml-2 text-[10px] text-slate-400">({taskCount})</span>
+                            </button>
+                          );
+                        })}
+                        {visibleCategories.length === 0 && <div className="px-3 py-2 text-[10px] text-slate-400">暂无文件记录</div>}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -196,7 +249,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         <div key={item.id} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
                           <input
                             type="checkbox"
-                            checked={item.task?.isCompleted || false}
+                            checked={item.task?.status === 'COMPLETED'}
                             onChange={() => item.task && onToggleTask(item.task.id)}
                             disabled={!item.task || isViewingHistory}
                             className={`w-4 h-4 text-${theme}-600 rounded`}
@@ -217,9 +270,61 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     <h3 className="font-bold text-slate-700 mb-3">完成度说明</h3>
                     <ul className="text-xs text-slate-500 space-y-2">
                       <li>完成度仅统计当前阶段已启用的一级分类。</li>
-                      <li>二级条目由设计人员手动勾选完成状态。</li>
+                      <li>二级条目由设计人员手动维护状态，状态为 COMPLETED 计入完成度。</li>
                       <li>历史阶段仅供查看，不计入当前阶段完成度。</li>
                     </ul>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-bold text-slate-700">历史阶段对比</h3>
+                      <select
+                        value={compareStage}
+                        onChange={e => setCompareStage(e.target.value as DesignStage | '')}
+                        className="border border-slate-200 rounded-lg px-3 py-1 text-xs bg-white"
+                      >
+                        <option value="">选择历史阶段</option>
+                        {historyStages.map(stage => (
+                          <option key={stage} value={stage}>{stage}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {compareStage ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div className="p-3 bg-slate-50 rounded-xl">
+                          <div className="text-slate-500 mb-1">当前阶段（{currentSub.stage}）</div>
+                          <div className="text-slate-800 font-bold">任务数：{currentStageStats.length}</div>
+                          <div className="text-slate-800 font-bold">完成度：{pct(currentStageStats)}%</div>
+                        </div>
+                        <div className="p-3 bg-slate-50 rounded-xl">
+                          <div className="text-slate-500 mb-1">历史阶段（{compareStage}）</div>
+                          <div className="text-slate-800 font-bold">任务数：{compareStageStats.length}</div>
+                          <div className="text-slate-800 font-bold">完成度：{pct(compareStageStats)}%</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-400">暂无历史阶段对比数据。</div>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                    <h3 className="font-bold text-slate-700 mb-3">最近操作日志</h3>
+                    {operationLogs.length === 0 ? (
+                      <div className="text-xs text-slate-400">暂无操作日志。</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {operationLogs.map(log => (
+                          <div key={log.id} className="text-xs text-slate-600 bg-slate-50 rounded px-3 py-2">
+                            <span className="font-bold text-slate-800">{log.actor}</span>
+                            <span className="mx-1">在</span>
+                            <span>{new Date(log.createdAt).toLocaleString()}</span>
+                            <span className="mx-1">执行</span>
+                            <span className="font-mono">{log.action}</span>
+                            {log.detail ? <span className="mx-1">（{log.detail}）</span> : null}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -229,16 +334,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       <h3 className="text-lg font-bold text-slate-800">{enabledCategories.find(category => category.id === selectedCategoryId)?.name}</h3>
                       {isViewingHistory && <p className="text-xs text-amber-600 mt-1">历史阶段仅供查看，不可编辑</p>}
                     </div>
-                    <button
-                      onClick={() => {
-                        const category = enabledCategories.find(c => c.id === selectedCategoryId);
-                        if (category) onOpenAddTaskModal(category.group, category.name, category.id);
-                      }}
-                      disabled={isViewingHistory}
-                      className={`text-xs font-medium ${isViewingHistory ? 'text-slate-300 cursor-not-allowed' : `text-${theme}-600 hover:underline`}`}
-                    >
-                      + 添加条目
-                    </button>
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => onSelectCategory('overview')}
+                        className="text-xs text-slate-500 hover:underline"
+                      >
+                        返回总览
+                      </button>
+                      <button
+                        onClick={() => {
+                          const category = enabledCategories.find(c => c.id === selectedCategoryId);
+                          if (category) onOpenAddTaskModal(category.group, category.name, category.id);
+                        }}
+                        disabled={isViewingHistory}
+                        className={`text-xs font-medium ${isViewingHistory ? 'text-slate-300 cursor-not-allowed' : `text-${theme}-600 hover:underline`}`}
+                      >
+                        + 添加条目
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     {activeStageTasks
@@ -248,7 +362,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                           key={task.id}
                           task={task}
                           onToggle={() => onToggleTask(task.id)}
+                          onChangeStatus={status => onChangeTaskStatus(task.id, status)}
+                          onChangeBlockedReason={blockedReason => onChangeTaskBlockedReason(task.id, blockedReason)}
+                          onAddComment={content => onAddTaskComment(task.id, content)}
                           onUpload={e => onUploadTaskFile(task.id, e)}
+                          onRetryUpload={() => onRetryTaskUpload(task.id)}
+                          uploadError={uploadErrors[task.id]}
                           onDownloadFile={onDownloadFile}
                           onDeleteVersion={onDeleteVersion}
                           onDeleteTask={() => onDeleteTask(task.id)}

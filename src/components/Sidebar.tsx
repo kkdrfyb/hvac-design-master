@@ -7,6 +7,7 @@ interface SidebarProps {
   currentSubId: string;
   onSelectProject: (mainId: string, subId: string) => void;
   onCreateProject: () => void;
+  canCreateProject: boolean;
   theme: ThemeColor;
 }
 
@@ -16,11 +17,34 @@ const Sidebar: React.FC<SidebarProps> = ({
   currentSubId,
   onSelectProject,
   onCreateProject,
+  canCreateProject,
   theme
 }) => {
+  const [keyword, setKeyword] = React.useState('');
+  const normalized = keyword.trim().toLowerCase();
+
+  const filteredProjects = projects
+    .map(project => ({
+      ...project,
+      subProjects: (project.subProjects || []).filter(sub => {
+        if (!normalized) return true;
+        const projectHit = project.name.toLowerCase().startsWith(normalized) || project.code.toLowerCase().startsWith(normalized);
+        const subHit = sub.name.toLowerCase().startsWith(normalized) || sub.code.toLowerCase().startsWith(normalized);
+        return projectHit || subHit;
+      }),
+    }))
+    .filter(project => project.subProjects.length > 0 || !normalized);
+
   return (
     <div className="flex flex-col gap-4">
-      {projects.map(project => (
+      <input
+        type="text"
+        value={keyword}
+        onChange={e => setKeyword(e.target.value)}
+        placeholder="前缀匹配项目/子项"
+        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs"
+      />
+      {filteredProjects.map(project => (
         <div key={project.id} className="space-y-1">
           <div className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest flex justify-between items-center group">
             <span>{project.name}</span>
@@ -46,13 +70,15 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       ))}
 
-      <button
-        onClick={onCreateProject}
-        className={`mt-4 w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-${theme}-400 hover:text-${theme}-600 transition-all flex items-center justify-center gap-2 hover:bg-${theme}-50`}
-      >
-        <span className="text-sm">+</span>
-        新建设计项目
-      </button>
+      {canCreateProject && (
+        <button
+          onClick={onCreateProject}
+          className={`mt-4 w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-${theme}-400 hover:text-${theme}-600 transition-all flex items-center justify-center gap-2 hover:bg-${theme}-50`}
+        >
+          <span className="text-sm">+</span>
+          新建设计项目
+        </button>
+      )}
     </div>
   );
 };

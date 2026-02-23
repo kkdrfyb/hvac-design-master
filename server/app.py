@@ -5,6 +5,8 @@ import os
 import sqlite3
 import shutil
 import bcrypt
+import io
+import zipfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,7 +16,7 @@ from uuid import uuid4
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
@@ -26,6 +28,45 @@ DB_PATH = SERVER_DIR / "hvac.db"
 UPLOAD_ROOT = SERVER_DIR / "uploads"
 JWT_SECRET = os.getenv("JWT_SECRET", "hvac-secret-key")
 JWT_ALGORITHM = "HS256"
+MAX_UPLOAD_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+
+DEFAULT_CLAUSES = [
+    {
+        "id": "m2",
+        "code": "GB 50016-2014",
+        "clause_number": "9.3.11",
+        "content": "通风、空气调节系统的风管在穿越防火分区处、穿越通风、空气调节机房的房间隔墙和楼板处等部位应设置防火阀。",
+    },
+    {
+        "id": "m4",
+        "code": "GB 50019-2015",
+        "clause_number": "6.3.9",
+        "content": "事故通风的排风口，应配置在有害气体散发量可能最大的地点。",
+    },
+    {
+        "id": "m6",
+        "code": "GB 50016-2014",
+        "clause_number": "9.3.2",
+        "content": "厂房内有爆炸危险场所的排风管道，严禁穿过防火墙和有爆炸危险的房间隔墙。",
+    },
+]
+
+DEFAULT_COMMON_ERRORS = [
+    {
+        "id": "err1",
+        "title": "防火阀设置遗漏",
+        "category": "通风系统",
+        "description": "经常遗漏穿越重要机房或变形缝处的防火阀。",
+        "solution": "检查所有穿越防火分区、变形缝及重要设备机房的管段，并在系统图中标注。",
+    },
+    {
+        "id": "err2",
+        "title": "冷凝水管坡度不足",
+        "category": "通用设计流程",
+        "description": "吊顶空间有限时，冷凝水管坡度往往小于0.005，导致排水不畅漏水。",
+        "solution": "在剖面图中严格复核吊顶高度，确保至少1%的坡度，必要时增加提升泵。",
+    },
+]
 
 auth_scheme = HTTPBearer(auto_error=False)
 
@@ -60,7 +101,8 @@ def init_db() -> None:
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               username TEXT UNIQUE,
               password TEXT,
-              role TEXT DEFAULT 'user'
+              role TEXT DEFAULT 'user',
+              must_change_password INTEGER DEFAULT 0
             )
             """
         )
@@ -98,6 +140,67 @@ def init_db() -> None:
             )
             """
         )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS clauses (
+              id TEXT PRIMARY KEY,
+              code TEXT NOT NULL,
+              clause_number TEXT NOT NULL,
+              content TEXT NOT NULL,
+              project_type TEXT,
+              stage TEXT,
+              updated_at TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS common_errors (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              category TEXT NOT NULL,
+              description TEXT NOT NULL,
+              solution TEXT NOT NULL,
+              project_type TEXT,
+              stage TEXT,
+              updated_at TEXT NOT NULL
+            )
+            """
+        )
+        _ensure_column(db, "users", "must_change_password", "INTEGER DEFAULT 0")
+        _seed_knowledge_data(db)
+
+
+def _ensure_column(db: sqlite3.Connection, table: str, column: str, column_sql: str) -> None:
+    cols = db.execute(f"PRAGMA table_info({table})").fetchall()
+    if any(row["name"] == column for row in cols):
+        return
+    db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_sql}")
+
+
+def _seed_knowledge_data(db: sqlite3.Connection) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    clause_count = db.execute("SELECT COUNT(1) AS cnt FROM clauses").fetchone()["cnt"]
+    if clause_count == 0:
+        for item in DEFAULT_CLAUSES:
+            db.execute(
+                """
+                INSERT INTO clauses (id, code, clause_number, content, project_type, stage, updated_at)
+                VALUES (?, ?, ?, ?, NULL, NULL, ?)
+                """,
+                (item["id"], item["code"], item["clause_number"], item["content"], now),
+            )
+
+    error_count = db.execute("SELECT COUNT(1) AS cnt FROM common_errors").fetchone()["cnt"]
+    if error_count == 0:
+        for item in DEFAULT_COMMON_ERRORS:
+            db.execute(
+                """
+                INSERT INTO common_errors (id, title, category, description, solution, project_type, stage, updated_at)
+                VALUES (?, ?, ?, ?, ?, NULL, NULL, ?)
+                """,
+                (item["id"], item["title"], item["category"], item["description"], item["solution"], now),
+            )
 
 
 def hash_password(password: str) -> str:
@@ -119,19 +222,24 @@ def is_bcrypt_hash(value: str) -> bool:
 
 
 def ensure_default_test_users() -> None:
-    default_users = ("user1", "user2", "user3")
+    default_users = (
+        ("admin", "admin"),
+        ("user1", "user"),
+        ("user2", "user"),
+        ("user3", "user"),
+    )
     with get_db() as db:
-        for username in default_users:
+        for username, role in default_users:
             row = db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
             if row:
                 db.execute(
-                    "UPDATE users SET password = ?, role = 'user' WHERE id = ?",
-                    (hash_password("password123"), row["id"]),
+                    "UPDATE users SET password = ?, role = ?, must_change_password = 1 WHERE id = ?",
+                    (hash_password("123456"), role, row["id"]),
                 )
                 continue
             db.execute(
-                "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-                (username, hash_password("password123"), "user"),
+                "INSERT INTO users (username, password, role, must_change_password) VALUES (?, ?, ?, 1)",
+                (username, hash_password("123456"), role),
             )
 
 
@@ -163,29 +271,45 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
 
+def require_admin(user: Dict[str, Any]) -> None:
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+
 @app.post("/api/auth/register", status_code=201)
-async def register(request: Request):
+async def register(
+    request: Request, user: Dict[str, Any] = Depends(get_current_user)
+):
+    require_admin(user)
     data = await request.json()
     username = (data.get("username") or "").strip()
     password = data.get("password") or ""
+    role = data.get("role") or "user"
     if not username or not password:
         raise HTTPException(status_code=400, detail="Username and password required")
+    if role not in ("admin", "user"):
+        raise HTTPException(status_code=400, detail="Invalid role")
 
     hashed_password = hash_password(password)
-    role = "user"
+    must_change_password = bool(data.get("mustChangePassword", True))
 
     with get_db() as db:
         try:
             cur = db.execute(
-                "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-                (username, hashed_password, role),
+                "INSERT INTO users (username, password, role, must_change_password) VALUES (?, ?, ?, ?)",
+                (username, hashed_password, role, 1 if must_change_password else 0),
             )
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint failed" in str(e):
                 raise HTTPException(status_code=400, detail="Username already exists")
             raise HTTPException(status_code=500, detail=str(e))
 
-    return {"id": cur.lastrowid, "username": username, "role": role}
+    return {
+        "id": cur.lastrowid,
+        "username": username,
+        "role": role,
+        "mustChangePassword": must_change_password,
+    }
 
 
 @app.post("/api/auth/login")
@@ -212,21 +336,293 @@ async def login(request: Request):
     )
     return {
         "token": token,
-        "user": {"id": row["id"], "username": row["username"], "role": row["role"]},
+        "user": {
+            "id": row["id"],
+            "username": row["username"],
+            "role": row["role"],
+            "mustChangePassword": bool(row["must_change_password"]),
+        },
     }
 
 
 @app.get("/api/auth/me")
 def me(user: Dict[str, Any] = Depends(get_current_user)):
-    return {"user": user}
+    with get_db() as db:
+        row = db.execute(
+            "SELECT id, username, role, must_change_password FROM users WHERE id = ?",
+            (user["id"],),
+        ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "user": {
+            "id": row["id"],
+            "username": row["username"],
+            "role": row["role"],
+            "mustChangePassword": bool(row["must_change_password"]),
+        }
+    }
+
+
+@app.post("/api/auth/change-password")
+async def change_password(
+    request: Request, user: Dict[str, Any] = Depends(get_current_user)
+):
+    data = await request.json()
+    old_password = data.get("oldPassword") or ""
+    new_password = data.get("newPassword") or ""
+    if not old_password or not new_password:
+        raise HTTPException(status_code=400, detail="Both oldPassword and newPassword are required")
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+
+    with get_db() as db:
+        row = db.execute(
+            "SELECT id, password FROM users WHERE id = ?",
+            (user["id"],),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+        if not verify_password(old_password, row["password"] or ""):
+            raise HTTPException(status_code=400, detail="Old password is incorrect")
+        db.execute(
+            "UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?",
+            (hash_password(new_password), user["id"]),
+        )
+    return {"success": True}
+
+
+@app.get("/api/knowledge/clauses")
+def list_clauses(
+    q: str | None = None,
+    project_type: str | None = None,
+    stage: str | None = None,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    sql = "SELECT * FROM clauses WHERE 1=1"
+    params: list[Any] = []
+    if q:
+        sql += " AND (code LIKE ? OR clause_number LIKE ? OR content LIKE ?)"
+        like = f"%{q}%"
+        params.extend([like, like, like])
+    if project_type:
+        sql += " AND (project_type IS NULL OR project_type = ?)"
+        params.append(project_type)
+    if stage:
+        sql += " AND (stage IS NULL OR stage = ?)"
+        params.append(stage)
+    sql += " ORDER BY updated_at DESC"
+
+    with get_db() as db:
+        rows = db.execute(sql, params).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "code": row["code"],
+            "clauseNumber": row["clause_number"],
+            "content": row["content"],
+            "projectType": row["project_type"],
+            "stage": row["stage"],
+        }
+        for row in rows
+    ]
+
+
+@app.post("/api/knowledge/clauses")
+async def create_clause(
+    request: Request, user: Dict[str, Any] = Depends(get_current_user)
+):
+    require_admin(user)
+    data = await request.json()
+    code = (data.get("code") or "").strip()
+    clause_number = (data.get("clauseNumber") or "").strip()
+    content = (data.get("content") or "").strip()
+    if not code or not clause_number or not content:
+        raise HTTPException(status_code=400, detail="code, clauseNumber and content are required")
+    clause_id = (data.get("id") or uuid4().hex).strip()
+    now = datetime.now(timezone.utc).isoformat()
+    with get_db() as db:
+        db.execute(
+            """
+            INSERT INTO clauses (id, code, clause_number, content, project_type, stage, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                clause_id,
+                code,
+                clause_number,
+                content,
+                data.get("projectType"),
+                data.get("stage"),
+                now,
+            ),
+        )
+    return {
+        "id": clause_id,
+        "code": code,
+        "clauseNumber": clause_number,
+        "content": content,
+        "projectType": data.get("projectType"),
+        "stage": data.get("stage"),
+    }
+
+
+@app.put("/api/knowledge/clauses/{clause_id}")
+async def update_clause(
+    clause_id: str, request: Request, user: Dict[str, Any] = Depends(get_current_user)
+):
+    require_admin(user)
+    data = await request.json()
+    code = (data.get("code") or "").strip()
+    clause_number = (data.get("clauseNumber") or "").strip()
+    content = (data.get("content") or "").strip()
+    if not code or not clause_number or not content:
+        raise HTTPException(status_code=400, detail="code, clauseNumber and content are required")
+    now = datetime.now(timezone.utc).isoformat()
+    with get_db() as db:
+        updated = db.execute(
+            """
+            UPDATE clauses
+            SET code = ?, clause_number = ?, content = ?, project_type = ?, stage = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (code, clause_number, content, data.get("projectType"), data.get("stage"), now, clause_id),
+        )
+    if updated.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Clause not found")
+    return {"success": True}
+
+
+@app.delete("/api/knowledge/clauses/{clause_id}")
+def delete_clause(clause_id: str, user: Dict[str, Any] = Depends(get_current_user)):
+    require_admin(user)
+    with get_db() as db:
+        deleted = db.execute("DELETE FROM clauses WHERE id = ?", (clause_id,))
+    if deleted.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Clause not found")
+    return {"success": True}
+
+
+@app.get("/api/knowledge/errors")
+def list_common_errors(
+    q: str | None = None,
+    project_type: str | None = None,
+    stage: str | None = None,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    sql = "SELECT * FROM common_errors WHERE 1=1"
+    params: list[Any] = []
+    if q:
+        sql += " AND (title LIKE ? OR description LIKE ? OR category LIKE ?)"
+        like = f"%{q}%"
+        params.extend([like, like, like])
+    if project_type:
+        sql += " AND (project_type IS NULL OR project_type = ?)"
+        params.append(project_type)
+    if stage:
+        sql += " AND (stage IS NULL OR stage = ?)"
+        params.append(stage)
+    sql += " ORDER BY updated_at DESC"
+
+    with get_db() as db:
+        rows = db.execute(sql, params).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "title": row["title"],
+            "category": row["category"],
+            "description": row["description"],
+            "solution": row["solution"],
+            "projectType": row["project_type"],
+            "stage": row["stage"],
+        }
+        for row in rows
+    ]
+
+
+@app.post("/api/knowledge/errors")
+async def create_common_error(
+    request: Request, user: Dict[str, Any] = Depends(get_current_user)
+):
+    require_admin(user)
+    data = await request.json()
+    title = (data.get("title") or "").strip()
+    category = (data.get("category") or "").strip()
+    description = (data.get("description") or "").strip()
+    solution = (data.get("solution") or "").strip()
+    if not title or not category or not description or not solution:
+        raise HTTPException(status_code=400, detail="title, category, description and solution are required")
+    error_id = (data.get("id") or uuid4().hex).strip()
+    now = datetime.now(timezone.utc).isoformat()
+    with get_db() as db:
+        db.execute(
+            """
+            INSERT INTO common_errors (id, title, category, description, solution, project_type, stage, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                error_id,
+                title,
+                category,
+                description,
+                solution,
+                data.get("projectType"),
+                data.get("stage"),
+                now,
+            ),
+        )
+    return {
+        "id": error_id,
+        "title": title,
+        "category": category,
+        "description": description,
+        "solution": solution,
+        "projectType": data.get("projectType"),
+        "stage": data.get("stage"),
+    }
+
+
+@app.put("/api/knowledge/errors/{error_id}")
+async def update_common_error(
+    error_id: str, request: Request, user: Dict[str, Any] = Depends(get_current_user)
+):
+    require_admin(user)
+    data = await request.json()
+    title = (data.get("title") or "").strip()
+    category = (data.get("category") or "").strip()
+    description = (data.get("description") or "").strip()
+    solution = (data.get("solution") or "").strip()
+    if not title or not category or not description or not solution:
+        raise HTTPException(status_code=400, detail="title, category, description and solution are required")
+    now = datetime.now(timezone.utc).isoformat()
+    with get_db() as db:
+        updated = db.execute(
+            """
+            UPDATE common_errors
+            SET title = ?, category = ?, description = ?, solution = ?, project_type = ?, stage = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (title, category, description, solution, data.get("projectType"), data.get("stage"), now, error_id),
+        )
+    if updated.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Common error not found")
+    return {"success": True}
+
+
+@app.delete("/api/knowledge/errors/{error_id}")
+def delete_common_error(error_id: str, user: Dict[str, Any] = Depends(get_current_user)):
+    require_admin(user)
+    with get_db() as db:
+        deleted = db.execute("DELETE FROM common_errors WHERE id = ?", (error_id,))
+    if deleted.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Common error not found")
+    return {"success": True}
 
 
 @app.get("/api/projects")
 def list_projects(user: Dict[str, Any] = Depends(get_current_user)):
     with get_db() as db:
-        rows = db.execute(
-            "SELECT * FROM projects WHERE user_id = ?", (user["id"],)
-        ).fetchall()
+        rows = db.execute("SELECT * FROM projects").fetchall()
 
     result = []
     for row in rows:
@@ -262,18 +658,17 @@ async def upsert_project(
         existing = db.execute(
             "SELECT user_id FROM projects WHERE id = ?", (project_id,)
         ).fetchone()
-        if existing and existing["user_id"] != user["id"]:
-            raise HTTPException(status_code=403, detail="Forbidden")
         if existing:
             db.execute(
                 """
                 UPDATE projects
                 SET name = ?, code = ?, data = ?
-                WHERE id = ? AND user_id = ?
+                WHERE id = ?
                 """,
-                (name, code, data_json, project_id, user["id"]),
+                (name, code, data_json, project_id),
             )
         else:
+            require_admin(user)
             db.execute(
                 """
                 INSERT INTO projects (id, user_id, name, code, data)
@@ -283,7 +678,6 @@ async def upsert_project(
             )
         _sync_project_files(
             db,
-            user_id=user["id"],
             project_id=project_id,
             project_data=data_obj,
         )
@@ -294,15 +688,16 @@ async def upsert_project(
 def delete_project(
     project_id: str, user: Dict[str, Any] = Depends(get_current_user)
 ):
+    require_admin(user)
     with get_db() as db:
         file_rows = db.execute(
-            "SELECT id, relative_path FROM files WHERE project_id = ? AND user_id = ?",
-            (project_id, user["id"]),
+            "SELECT id, relative_path FROM files WHERE project_id = ?",
+            (project_id,),
         ).fetchall()
-        _delete_file_rows(db, file_rows, user["id"])
+        _delete_file_rows(db, file_rows)
         db.execute(
-            "DELETE FROM projects WHERE id = ? AND user_id = ?",
-            (project_id, user["id"]),
+            "DELETE FROM projects WHERE id = ?",
+            (project_id,),
         )
     return {"success": True}
 
@@ -332,9 +727,9 @@ def _unlink_relative_file(relative_path: str) -> None:
             pass
 
 
-def _delete_file_rows(db: sqlite3.Connection, rows: list[sqlite3.Row], user_id: int) -> None:
+def _delete_file_rows(db: sqlite3.Connection, rows: list[sqlite3.Row]) -> None:
     for row in rows:
-        db.execute("DELETE FROM files WHERE id = ? AND user_id = ?", (row["id"], user_id))
+        db.execute("DELETE FROM files WHERE id = ?", (row["id"],))
         relative_path = row["relative_path"]
         if isinstance(relative_path, str):
             _unlink_relative_file(relative_path)
@@ -391,17 +786,16 @@ def _collect_referenced_file_ids(project_data: Dict[str, Any]) -> set[str]:
 def _sync_project_files(
     db: sqlite3.Connection,
     *,
-    user_id: int,
     project_id: str,
     project_data: Dict[str, Any],
 ) -> None:
     referenced_ids = _collect_referenced_file_ids(project_data)
     existing_files = db.execute(
-        "SELECT id, relative_path FROM files WHERE user_id = ? AND project_id = ?",
-        (user_id, project_id),
+        "SELECT id, relative_path FROM files WHERE project_id = ?",
+        (project_id,),
     ).fetchall()
     to_delete = [row for row in existing_files if row["id"] not in referenced_ids]
-    _delete_file_rows(db, to_delete, user_id)
+    _delete_file_rows(db, to_delete)
 
 
 @app.post("/api/projects/{project_id}/subprojects/{sub_project_id}/tasks/{task_id}/files")
@@ -423,8 +817,8 @@ async def upload_task_files(
 
     with get_db() as db:
         project_row = db.execute(
-            "SELECT * FROM projects WHERE id = ? AND user_id = ?",
-            (project_id, user["id"]),
+            "SELECT * FROM projects WHERE id = ?",
+            (project_id,),
         ).fetchone()
         if not project_row:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -462,10 +856,23 @@ async def upload_task_files(
             file_id = uuid4().hex
             stored_name = f"{file_id}_{original_name}"
             stored_path = upload_dir / stored_name
-            with stored_path.open("wb") as out_file:
-                shutil.copyfileobj(incoming.file, out_file)
+            try:
+                with stored_path.open("wb") as out_file:
+                    shutil.copyfileobj(incoming.file, out_file)
+                size = stored_path.stat().st_size
+            except OSError as exc:
+                raise HTTPException(status_code=500, detail=f"Write file failed: {exc}")
 
-            size = stored_path.stat().st_size
+            if size > MAX_UPLOAD_FILE_SIZE:
+                try:
+                    stored_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File too large: {original_name}. Limit is {MAX_UPLOAD_FILE_SIZE // (1024 * 1024)}MB",
+                )
+
             relative_path = stored_path.relative_to(SERVER_DIR).as_posix()
             mime_type = incoming.content_type or "application/octet-stream"
             db.execute(
@@ -516,17 +923,15 @@ async def upload_task_files(
             """
             UPDATE projects
             SET data = ?
-            WHERE id = ? AND user_id = ?
+            WHERE id = ?
             """,
             (
                 json.dumps(project_data, ensure_ascii=False),
                 project_id,
-                user["id"],
             ),
         )
         _sync_project_files(
             db,
-            user_id=user["id"],
             project_id=project_id,
             project_data=project_data,
         )
@@ -544,8 +949,8 @@ def delete_task_version(
 ):
     with get_db() as db:
         project_row = db.execute(
-            "SELECT * FROM projects WHERE id = ? AND user_id = ?",
-            (project_id, user["id"]),
+            "SELECT * FROM projects WHERE id = ?",
+            (project_id,),
         ).fetchone()
         if not project_row:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -597,27 +1002,25 @@ def delete_task_version(
                 f"""
                 SELECT id, relative_path
                 FROM files
-                WHERE user_id = ? AND project_id = ? AND id IN ({placeholders})
+                WHERE project_id = ? AND id IN ({placeholders})
                 """,
-                (user["id"], project_id, *file_ids),
+                (project_id, *file_ids),
             ).fetchall()
-            _delete_file_rows(db, rows, user["id"])
+            _delete_file_rows(db, rows)
 
         db.execute(
             """
             UPDATE projects
             SET data = ?
-            WHERE id = ? AND user_id = ?
+            WHERE id = ?
             """,
             (
                 json.dumps(project_data, ensure_ascii=False),
                 project_id,
-                user["id"],
             ),
         )
         _sync_project_files(
             db,
-            user_id=user["id"],
             project_id=project_id,
             project_data=project_data,
         )
@@ -629,8 +1032,8 @@ def delete_task_version(
 def download_file(file_id: str, user: Dict[str, Any] = Depends(get_current_user)):
     with get_db() as db:
         row = db.execute(
-            "SELECT * FROM files WHERE id = ? AND user_id = ?",
-            (file_id, user["id"]),
+            "SELECT * FROM files WHERE id = ?",
+            (file_id,),
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="File not found")
@@ -650,3 +1053,66 @@ def download_file(file_id: str, user: Dict[str, Any] = Depends(get_current_user)
         filename=row["original_name"],
         media_type=row["mime_type"] or "application/octet-stream",
     )
+
+
+@app.get("/api/projects/{project_id}/export")
+def export_project_files(
+    project_id: str,
+    stage: str | None = None,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    with get_db() as db:
+        project = db.execute(
+            "SELECT id, name, code FROM projects WHERE id = ?",
+            (project_id,),
+        ).fetchone()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        if stage:
+            rows = db.execute(
+                """
+                SELECT stage, task_id, version, original_name, relative_path
+                FROM files
+                WHERE project_id = ? AND stage = ?
+                ORDER BY uploaded_at DESC
+                """,
+                (project_id, stage),
+            ).fetchall()
+        else:
+            rows = db.execute(
+                """
+                SELECT stage, task_id, version, original_name, relative_path
+                FROM files
+                WHERE project_id = ?
+                ORDER BY uploaded_at DESC
+                """,
+                (project_id,),
+            ).fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No files found for export")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zip_file:
+        for row in rows:
+            relative_path = row["relative_path"]
+            file_path = (SERVER_DIR / relative_path).resolve()
+            try:
+                file_path.relative_to(SERVER_DIR)
+            except ValueError:
+                continue
+            if not file_path.exists():
+                continue
+            stage_folder = row["stage"] or "unknown-stage"
+            task_folder = row["task_id"] or "unknown-task"
+            version_folder = row["version"] or "unknown-version"
+            arcname = f"{stage_folder}/{task_folder}/{version_folder}/{row['original_name']}"
+            zip_file.write(file_path, arcname=arcname)
+
+    zip_buffer.seek(0)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    stage_part = f"_{stage}" if stage else "_all"
+    filename = f"{project['name']}_{project['code']}{stage_part}_{timestamp}.zip"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)

@@ -19,6 +19,7 @@ const normalizeSubProject = (sp: Partial<SubProject> | any): SubProject => ({
   stageHistory: Array.isArray(sp?.stageHistory) ? sp.stageHistory : [],
   enabledCategoryIds: Array.isArray(sp?.enabledCategoryIds) ? sp.enabledCategoryIds : [],
   tasks: Array.isArray(sp?.tasks) ? sp.tasks : [],
+  operationLogs: Array.isArray(sp?.operationLogs) ? sp.operationLogs : [],
 });
 
 const baseProjects: MainProject[] = [
@@ -36,6 +37,7 @@ const baseProjects: MainProject[] = [
         stageHistory: [],
         enabledCategoryIds: [],
         tasks: [],
+        operationLogs: [],
       },
     ],
   },

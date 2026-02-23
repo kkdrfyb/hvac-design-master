@@ -20,6 +20,7 @@ const baseSubProject: SubProject = {
   stageHistory: [],
   enabledCategoryIds: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id),
   tasks: [],
+  operationLogs: [],
 };
 
 const baseProjects: MainProject[] = [

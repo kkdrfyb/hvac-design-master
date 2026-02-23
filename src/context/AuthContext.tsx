@@ -5,6 +5,7 @@ interface User {
     id: number;
     username: string;
     role: string;
+    mustChangePassword?: boolean;
 }
 
 interface AuthContextType {
@@ -54,14 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const quickSwitch = async (username: string) => {
         setIsLoading(true);
         try {
-            // First try to login, if fails try to register then login
-            let data;
-            try {
-                data = await api.post('/auth/login', { username, password: 'password123' });
-            } catch (e) {
-                await api.post('/auth/register', { username, password: 'password123' });
-                data = await api.post('/auth/login', { username, password: 'password123' });
-            }
+            const data = await api.post('/auth/login', { username, password: '123456' });
             login(data.token, data.user);
         } catch (e) {
             console.error('Quick switch failed', e);

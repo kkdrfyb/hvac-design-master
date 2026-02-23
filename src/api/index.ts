@@ -37,6 +37,15 @@ export const api = {
         if (!res.ok) throw new Error(await getErrorMessage(res));
         return res.json();
     },
+    async put(path: string, body: any) {
+        const res = await fetch(`${API_URL}${path}`, {
+            method: 'PUT',
+            headers: getJsonHeaders(),
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error(await getErrorMessage(res));
+        return res.json();
+    },
     async delete(path: string) {
         const res = await fetch(`${API_URL}${path}`, {
             method: 'DELETE',

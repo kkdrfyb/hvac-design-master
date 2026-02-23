@@ -16,6 +16,7 @@ import { useTaskOperations } from './hooks/useTaskOperations';
 import { useStageNavigation } from './hooks/useStageNavigation';
 import { useProjectSync } from './hooks/useProjectSync';
 import { useProjectBootstrap } from './hooks/useProjectBootstrap';
+import { api } from './api';
 const ensureValidSubProject = (sp: Partial<SubProject> | any): SubProject => {
     const type: ProjectType = sp?.type || '其他';
     const stage: DesignStage = sp?.stage || '方案设计';
@@ -33,8 +34,11 @@ const ensureValidSubProject = (sp: Partial<SubProject> | any): SubProject => {
         tasks: Array.isArray(sp?.tasks) ? sp.tasks.map((t: any) => ({
             ...t,
             stage: t?.stage || stage,
+            status: t?.status || (t?.isCompleted ? 'COMPLETED' : 'TODO'),
+            comments: Array.isArray(t?.comments) ? t.comments : [],
             versions: Array.isArray(t?.versions) ? t.versions : []
-        })) : buildTasksFromTemplate(type, stage, enabledCategoryIds)
+        })) : buildTasksFromTemplate(type, stage, enabledCategoryIds),
+        operationLogs: Array.isArray(sp?.operationLogs) ? sp.operationLogs : [],
     };
 };
 
@@ -46,6 +50,10 @@ const VIEW_TITLES: Record<ViewState, string> = {
 
 const App: React.FC = () => {
     const { user, logout, isLoading: authLoading } = useAuth();
+    const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [passwordSaving, setPasswordSaving] = useState(false);
+    const [passwordError, setPasswordError] = useState('');
 
     // Global View State
     const [currentView, setCurrentView] = useState<ViewState>('dashboard');
@@ -98,6 +106,7 @@ const App: React.FC = () => {
         handleStageAdvance
     } = useStageNavigation({
         currentSub,
+        actorName: user?.username || 'system',
         updateCurrentSubProject
     });
 
@@ -113,8 +122,14 @@ const App: React.FC = () => {
         errorDisplayCount,
         setErrorDisplayCount,
         displayedErrors,
-        refreshRandomErrors
-    } = useKnowledgePanels();
+        refreshRandomErrors,
+        knowledgeError,
+        createClause,
+        deleteClause,
+        createError,
+        deleteError,
+        isAdmin
+    } = useKnowledgePanels({ isAdmin: user?.role === 'admin' });
 
     const {
         showNewProjectModal,
@@ -141,17 +156,55 @@ const App: React.FC = () => {
         closeAddTaskModal,
         handleConfirmAddTask,
         toggleTask,
+        setTaskStatus,
+        setTaskBlockedReason,
+        addTaskComment,
         handleDownloadFile,
         handleDeleteTask,
         handleTaskFileUpload,
+        retryTaskUpload,
+        uploadErrors,
         handleDeleteVersion
     } = useTaskOperations({
         activeStage,
         currentSub,
         currentMainId,
         currentSubId,
+        actorName: user?.username || 'system',
         updateCurrentSubProject
     });
+
+    const triggerDownload = async (path: string, fallbackName: string) => {
+        try {
+            const { blob, fileName } = await api.downloadFile(path);
+            const downloadName = fileName || fallbackName;
+            const blobUrl = window.URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = blobUrl;
+            anchor.download = downloadName;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error('Export failed', err);
+            alert(err instanceof Error ? err.message : '导出失败，请稍后重试。');
+        }
+    };
+
+    const handleExportCurrentStage = () => {
+        triggerDownload(
+            `/projects/${currentMainId}/export?stage=${encodeURIComponent(activeStage)}`,
+            `${currentMain.name}_${currentMain.code}_${activeStage}.zip`
+        );
+    };
+
+    const handleExportProject = () => {
+        triggerDownload(
+            `/projects/${currentMainId}/export`,
+            `${currentMain.name}_${currentMain.code}_all.zip`
+        );
+    };
 
     const currentViewContent = {
         dashboard: (
@@ -170,12 +223,19 @@ const App: React.FC = () => {
                 nextStage={nextStage}
                 onChangeStage={onChangeStage}
                 onAdvanceStage={handleStageAdvance}
+                onExportCurrentStage={handleExportCurrentStage}
+                onExportProject={handleExportProject}
                 onSelectCategory={onSelectCategory}
                 onToggleShowEmptyCategories={onToggleShowEmptyCategories}
                 onOpenRegulations={() => setCurrentView('regulations')}
                 onOpenErrors={() => setCurrentView('errors')}
                 onToggleTask={toggleTask}
+                onChangeTaskStatus={setTaskStatus}
+                onChangeTaskBlockedReason={setTaskBlockedReason}
+                onAddTaskComment={addTaskComment}
                 onUploadTaskFile={handleTaskFileUpload}
+                onRetryTaskUpload={retryTaskUpload}
+                uploadErrors={uploadErrors}
                 onDownloadFile={handleDownloadFile}
                 onDeleteVersion={handleDeleteVersion}
                 onDeleteTask={handleDeleteTask}
@@ -190,6 +250,10 @@ const App: React.FC = () => {
                 onClauseSearchChange={(value) => setClauseSearch(value)}
                 onDisplayCountChange={(value) => setDisplayCount(value)}
                 onRefresh={refreshRandomClauses}
+                knowledgeError={knowledgeError}
+                isAdmin={isAdmin}
+                onCreateClause={createClause}
+                onDeleteClause={deleteClause}
             />
         ),
         errors: (
@@ -200,6 +264,10 @@ const App: React.FC = () => {
                 onErrorSearchChange={(value) => setErrorSearch(value)}
                 onErrorDisplayCountChange={(value) => setErrorDisplayCount(value)}
                 onRefresh={refreshRandomErrors}
+                knowledgeError={knowledgeError}
+                isAdmin={isAdmin}
+                onCreateError={createError}
+                onDeleteError={deleteError}
             />
         )
     }[currentView];
@@ -219,6 +287,53 @@ const App: React.FC = () => {
         return <Auth />;
     }
 
+    if (user.mustChangePassword) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+                <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-xl">
+                    <h2 className="text-2xl font-black text-slate-800 mb-2">首次登录请修改密码</h2>
+                    <p className="text-xs text-slate-500 mb-6">为保证账号安全，请先修改默认密码后继续使用。</p>
+                    {passwordError && <p className="text-xs text-red-600 mb-3">{passwordError}</p>}
+                    <div className="space-y-3">
+                        <input
+                            type="password"
+                            value={oldPassword}
+                            onChange={e => setOldPassword(e.target.value)}
+                            placeholder="旧密码（默认 123456）"
+                            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
+                        />
+                        <input
+                            type="password"
+                            value={newPassword}
+                            onChange={e => setNewPassword(e.target.value)}
+                            placeholder="新密码（至少6位）"
+                            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
+                        />
+                    </div>
+                    <button
+                        disabled={passwordSaving}
+                        onClick={async () => {
+                            setPasswordError('');
+                            setPasswordSaving(true);
+                            try {
+                                await api.post('/auth/change-password', { oldPassword, newPassword });
+                                alert('密码修改成功，请重新登录。');
+                                logout();
+                            } catch (err) {
+                                setPasswordError(err instanceof Error ? err.message : '密码修改失败');
+                            } finally {
+                                setPasswordSaving(false);
+                            }
+                        }}
+                        className="mt-5 w-full bg-blue-600 text-white rounded-xl py-3 text-sm font-bold disabled:opacity-50"
+                    >
+                        {passwordSaving ? '保存中...' : '保存新密码'}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={`min-h-screen max-h-screen bg-slate-50 flex font-sans text-slate-900 overflow-hidden`}>
             {/* Sidebar */}
@@ -234,7 +349,7 @@ const App: React.FC = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-black text-slate-800 truncate">{user.username}</p>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">设计账号</span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{user.role === 'admin' ? '管理员账号' : '设计账号'}</span>
                         </div>
                     </div>
                 </div>
@@ -252,6 +367,7 @@ const App: React.FC = () => {
                                 setCurrentView('dashboard');
                             }}
                             onCreateProject={openNewProjectModal}
+                            canCreateProject={user.role === 'admin'}
                             theme={theme}
                         />
                     </section>

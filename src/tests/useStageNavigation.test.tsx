@@ -19,10 +19,12 @@ const baseSubProject: SubProject = {
       group: 'INTERFACE',
       stage: '初步设计',
       content: '其他专业关键条件是否齐备（工艺条件/电气防爆分区/安全条件）',
-      isCompleted: false,
+      status: 'TODO',
       versions: [],
+      comments: [],
     },
   ],
+  operationLogs: [],
 };
 
 describe('useStageNavigation', () => {
@@ -35,6 +37,7 @@ describe('useStageNavigation', () => {
     const { result } = renderHook(() =>
       useStageNavigation({
         currentSub: baseSubProject,
+        actorName: 'tester',
         updateCurrentSubProject,
       })
     );
@@ -60,6 +63,7 @@ describe('useStageNavigation', () => {
     const { result } = renderHook(() =>
       useStageNavigation({
         currentSub: baseSubProject,
+        actorName: 'tester',
         updateCurrentSubProject,
       })
     );
@@ -75,5 +79,8 @@ describe('useStageNavigation', () => {
     expect(updated.stage).toBe('施工图设计');
     expect(updated.stageHistory).toContain('初步设计');
     expect(updated.tasks.some(task => task.stage === '施工图设计')).toBe(true);
+    expect(updated.operationLogs[0]?.action).toBe('advance_stage');
+    expect(updated.operationLogs[0]?.actor).toBe('tester');
+    expect(updated.operationLogs[0]?.detail).toBe('初步设计 -> 施工图设计');
   });
 });

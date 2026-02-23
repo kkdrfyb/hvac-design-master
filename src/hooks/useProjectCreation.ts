@@ -58,6 +58,7 @@ export const useProjectCreation = ({
       stageHistory: [],
       enabledCategoryIds,
       tasks: buildTasksFromTemplate(newProjectData.type, newProjectData.stage, enabledCategoryIds),
+      operationLogs: [],
     };
 
     const existingMain = projects.find(project => project.name === newProjectData.mainName);

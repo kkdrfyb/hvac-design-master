@@ -4,10 +4,11 @@ import { DesignStage, SubProject, TemplateCategory } from '../types';
 
 interface UseStageNavigationOptions {
   currentSub: SubProject;
+  actorName: string;
   updateCurrentSubProject: (updater: (sp: SubProject) => SubProject) => void;
 }
 
-export const useStageNavigation = ({ currentSub, updateCurrentSubProject }: UseStageNavigationOptions) => {
+export const useStageNavigation = ({ currentSub, actorName, updateCurrentSubProject }: UseStageNavigationOptions) => {
   const [activeStage, setActiveStage] = useState<DesignStage>(currentSub.stage);
   const [selectedCategoryId, setSelectedCategoryId] = useState('overview');
   const [showEmptyCategories, setShowEmptyCategories] = useState(false);
@@ -83,12 +84,22 @@ export const useStageNavigation = ({ currentSub, updateCurrentSubProject }: UseS
       const tasks = hasStageTasks
         ? sp.tasks
         : [...sp.tasks, ...buildTasksFromTemplate(sp.type, nextStage, enabledCategoryIds)];
+      const logEntry = {
+        id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        action: 'advance_stage',
+        actor: actorName,
+        createdAt: new Date().toISOString(),
+        targetType: 'stage' as const,
+        targetId: nextStage,
+        detail: `${sp.stage} -> ${nextStage}`,
+      };
       return {
         ...sp,
         stage: nextStage,
         stageHistory,
         enabledCategoryIds,
         tasks,
+        operationLogs: [logEntry, ...(sp.operationLogs || [])].slice(0, 300),
       };
     });
   };

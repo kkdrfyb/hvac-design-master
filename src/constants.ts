@@ -8,21 +8,21 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
   核岛厂房: {
     方案设计: [
       {
+        id: 'ni-internal',
+        name: '专业内部设计',
+        group: 'INTERNAL',
+        items: [
+          { id: 'ni-int-s-1', content: '核岛房间功能分区与温湿度设计指标是否明确', group: 'INTERNAL', categoryId: 'ni-internal', category: '专业内部设计', minimal: true },
+          { id: 'ni-int-s-2', content: '主要系统设计原则与运行工况是否形成内部结论', group: 'INTERNAL', categoryId: 'ni-internal', category: '专业内部设计' }
+        ]
+      },
+      {
         id: 'ni-interface',
         name: '多专业接口',
         group: 'INTERFACE',
         items: [
           { id: 'ni-i-1', content: '核岛相关专业条件是否齐备（工艺系统/电气条件/安全级别与边界）', group: 'INTERFACE', categoryId: 'ni-interface', category: '多专业接口', minimal: true },
           { id: 'ni-i-2', content: '核岛系统边界条件是否统一（房间边界/安全边界）', group: 'INTERFACE', categoryId: 'ni-interface', category: '多专业接口' }
-        ]
-      },
-      {
-        id: 'ni-risk',
-        name: '安全与系统风险',
-        group: 'RISK',
-        items: [
-          { id: 'ni-r-1', content: '主要通风与空调系统方案是否明确（系统划分/运行工况/设备配置原则）', group: 'RISK', categoryId: 'ni-risk', category: '安全与系统风险', minimal: true },
-          { id: 'ni-r-2', content: '关键房间安全风险控制方案是否确认', group: 'RISK', categoryId: 'ni-risk', category: '安全与系统风险' }
         ]
       },
       {
@@ -35,6 +35,15 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
       }
     ],
     初步设计: [
+      {
+        id: 'ni-internal',
+        name: '专业内部设计',
+        group: 'INTERNAL',
+        items: [
+          { id: 'ni-int-p-1', content: '核岛主要系统方案与控制策略是否形成初设结论', group: 'INTERNAL', categoryId: 'ni-internal', category: '专业内部设计', minimal: true },
+          { id: 'ni-int-p-2', content: '关键设备选型边界条件是否完成校核', group: 'INTERNAL', categoryId: 'ni-internal', category: '专业内部设计' }
+        ]
+      },
       {
         id: 'ni-interface',
         name: '多专业接口',
@@ -63,6 +72,15 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
       }
     ],
     施工图设计: [
+      {
+        id: 'ni-internal',
+        name: '专业内部设计',
+        group: 'INTERNAL',
+        items: [
+          { id: 'ni-int-c-1', content: '施工图层面系统细化与房间参数是否全部闭合', group: 'INTERNAL', categoryId: 'ni-internal', category: '专业内部设计', minimal: true },
+          { id: 'ni-int-c-2', content: '关键节点做法与控制逻辑是否可落地', group: 'INTERNAL', categoryId: 'ni-internal', category: '专业内部设计' }
+        ]
+      },
       {
         id: 'ni-interface',
         name: '多专业接口',
@@ -88,11 +106,29 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
         items: [
           { id: 'ni-cd-1', content: '施工图阶段成果文件是否齐全（施工图/设备表/计算书/设计说明）', group: 'DELIVERABLE', categoryId: 'ni-deliver', category: '阶段成果', minimal: true }
         ]
+      },
+      {
+        id: 'ni-equipment',
+        name: '设备审查',
+        group: 'EQUIPMENT_REVIEW',
+        items: [
+          { id: 'ni-eq-1', content: '关键设备技术参数与图纸一致性是否审查完成', group: 'EQUIPMENT_REVIEW', categoryId: 'ni-equipment', category: '设备审查', minimal: true },
+          { id: 'ni-eq-2', content: '设备接口条件与安装维护空间是否确认', group: 'EQUIPMENT_REVIEW', categoryId: 'ni-equipment', category: '设备审查' }
+        ]
       }
     ]
   },
   附属工业厂房: {
     方案设计: [
+      {
+        id: 'aux-internal',
+        name: '专业内部设计',
+        group: 'INTERNAL',
+        items: [
+          { id: 'aux-int-s-1', content: '厂房工况与通风空调系统原则是否形成内部方案', group: 'INTERNAL', categoryId: 'aux-internal', category: '专业内部设计', minimal: true },
+          { id: 'aux-int-s-2', content: '主要设备布置约束与检修需求是否明确', group: 'INTERNAL', categoryId: 'aux-internal', category: '专业内部设计' }
+        ]
+      },
       {
         id: 'aux-interface',
         name: '多专业接口',
@@ -100,15 +136,6 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
         items: [
           { id: 'aux-i-1', content: '其他专业关键条件是否齐备（工艺条件/电气防爆分区/安全条件）', group: 'INTERFACE', categoryId: 'aux-interface', category: '多专业接口', minimal: true },
           { id: 'aux-i-2', content: '厂房边界条件是否明确（净高/设备区划分）', group: 'INTERFACE', categoryId: 'aux-interface', category: '多专业接口' }
-        ]
-      },
-      {
-        id: 'aux-risk',
-        name: '安全与风险控制',
-        group: 'RISK',
-        items: [
-          { id: 'aux-r-1', content: '危险气体相关通风设计是否完成（氯气/氢气区域通风方案与计算）', group: 'RISK', categoryId: 'aux-risk', category: '安全与风险控制', minimal: true },
-          { id: 'aux-r-2', content: '事故通风系统设置条件是否落实', group: 'RISK', categoryId: 'aux-risk', category: '安全与风险控制' }
         ]
       },
       {
@@ -121,6 +148,15 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
       }
     ],
     初步设计: [
+      {
+        id: 'aux-internal',
+        name: '专业内部设计',
+        group: 'INTERNAL',
+        items: [
+          { id: 'aux-int-p-1', content: '关键系统工况与计算边界是否完成初设校核', group: 'INTERNAL', categoryId: 'aux-internal', category: '专业内部设计', minimal: true },
+          { id: 'aux-int-p-2', content: '主要设备选型原则与系统控制逻辑是否明确', group: 'INTERNAL', categoryId: 'aux-internal', category: '专业内部设计' }
+        ]
+      },
       {
         id: 'aux-interface',
         name: '多专业接口',
@@ -149,6 +185,15 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
       }
     ],
     施工图设计: [
+      {
+        id: 'aux-internal',
+        name: '专业内部设计',
+        group: 'INTERNAL',
+        items: [
+          { id: 'aux-int-c-1', content: '施工图阶段系统深化设计是否完整闭合', group: 'INTERNAL', categoryId: 'aux-internal', category: '专业内部设计', minimal: true },
+          { id: 'aux-int-c-2', content: '关键节点构造与控制策略是否可实施', group: 'INTERNAL', categoryId: 'aux-internal', category: '专业内部设计' }
+        ]
+      },
       {
         id: 'aux-interface',
         name: '多专业接口',
@@ -174,11 +219,28 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
         items: [
           { id: 'aux-cd-1', content: '施工图阶段成果文件是否齐全（施工图/设备表/计算书/设计说明）', group: 'DELIVERABLE', categoryId: 'aux-deliver', category: '阶段成果', minimal: true }
         ]
+      },
+      {
+        id: 'aux-equipment',
+        name: '设备审查',
+        group: 'EQUIPMENT_REVIEW',
+        items: [
+          { id: 'aux-eq-1', content: '关键设备参数与系统设计输入是否一致', group: 'EQUIPMENT_REVIEW', categoryId: 'aux-equipment', category: '设备审查', minimal: true },
+          { id: 'aux-eq-2', content: '设备接口条件、检修与替换空间是否确认', group: 'EQUIPMENT_REVIEW', categoryId: 'aux-equipment', category: '设备审查' }
+        ]
       }
     ]
   },
   其他: {
     方案设计: [
+      {
+        id: 'gen-internal',
+        name: '专业内部设计',
+        group: 'INTERNAL',
+        items: [
+          { id: 'gen-int-s-1', content: '专业内部设计输入条件是否完整', group: 'INTERNAL', categoryId: 'gen-internal', category: '专业内部设计', minimal: true }
+        ]
+      },
       {
         id: 'gen-interface',
         name: '多专业接口',
@@ -186,14 +248,6 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
         items: [
           { id: 'gen-i-1', content: '多专业接口条件是否齐备', group: 'INTERFACE', categoryId: 'gen-interface', category: '多专业接口', minimal: true },
           { id: 'gen-i-2', content: '关键边界条件是否明确', group: 'INTERFACE', categoryId: 'gen-interface', category: '多专业接口' }
-        ]
-      },
-      {
-        id: 'gen-risk',
-        name: '安全与风险控制',
-        group: 'RISK',
-        items: [
-          { id: 'gen-r-1', content: '安全/风险相关系统方案是否明确', group: 'RISK', categoryId: 'gen-risk', category: '安全与风险控制', minimal: true }
         ]
       },
       {
@@ -206,6 +260,14 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
       }
     ],
     初步设计: [
+      {
+        id: 'gen-internal',
+        name: '专业内部设计',
+        group: 'INTERNAL',
+        items: [
+          { id: 'gen-int-p-1', content: '专业内部系统方案与计算是否完成初设校核', group: 'INTERNAL', categoryId: 'gen-internal', category: '专业内部设计', minimal: true }
+        ]
+      },
       {
         id: 'gen-interface',
         name: '多专业接口',
@@ -234,6 +296,14 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
     ],
     施工图设计: [
       {
+        id: 'gen-internal',
+        name: '专业内部设计',
+        group: 'INTERNAL',
+        items: [
+          { id: 'gen-int-c-1', content: '施工图层面专业内部设计是否闭合', group: 'INTERNAL', categoryId: 'gen-internal', category: '专业内部设计', minimal: true }
+        ]
+      },
+      {
         id: 'gen-interface',
         name: '多专业接口',
         group: 'INTERFACE',
@@ -256,6 +326,14 @@ export const TEMPLATE_CATEGORIES: Record<ProjectType, Record<DesignStage, Templa
         items: [
           { id: 'gen-cd-1', content: '施工图阶段成果文件是否齐全', group: 'DELIVERABLE', categoryId: 'gen-deliver', category: '阶段成果', minimal: true }
         ]
+      },
+      {
+        id: 'gen-equipment',
+        name: '设备审查',
+        group: 'EQUIPMENT_REVIEW',
+        items: [
+          { id: 'gen-eq-1', content: '关键设备参数与图纸一致性是否复核', group: 'EQUIPMENT_REVIEW', categoryId: 'gen-equipment', category: '设备审查', minimal: true }
+        ]
       }
     ]
   }
@@ -274,8 +352,9 @@ export const buildTasksFromTemplate = (type: ProjectType, stage: DesignStage, en
         group: item.group,
         stage,
         content: item.content,
-        isCompleted: false,
-        versions: []
+        status: 'TODO',
+        versions: [],
+        comments: []
       }))
     );
 };
@@ -291,10 +370,11 @@ export const INITIAL_PROJECTS: MainProject[] = [
         name: '氯气制备站',
         code: '01UTL',
         type: '附属工业厂房',
-        stage: '初步设计',
-        stageHistory: [],
-        enabledCategoryIds: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id),
-        tasks: buildTasksFromTemplate('附属工业厂房', '初步设计', TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id))
+      stage: '初步设计',
+      stageHistory: [],
+      enabledCategoryIds: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id),
+      tasks: buildTasksFromTemplate('附属工业厂房', '初步设计', TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id)),
+      operationLogs: [],
       }
     ]
   }

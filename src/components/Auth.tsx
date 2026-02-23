@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 
 export const Auth: React.FC = () => {
-    const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -13,14 +12,8 @@ export const Auth: React.FC = () => {
         e.preventDefault();
         setError('');
         try {
-            if (isLogin) {
-                const data = await api.post('/auth/login', { username, password });
-                login(data.token, data.user);
-            } else {
-                await api.post('/auth/register', { username, password });
-                const data = await api.post('/auth/login', { username, password });
-                login(data.token, data.user);
-            }
+            const data = await api.post('/auth/login', { username, password });
+            login(data.token, data.user);
         } catch (err: any) {
             setError(err.message || 'Authentication failed');
         }
@@ -35,7 +28,7 @@ export const Auth: React.FC = () => {
                     <div className="text-center mb-10 relative z-10">
                         <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-xl shadow-blue-100 mx-auto mb-6">H</div>
                         <h2 className="text-3xl font-black text-slate-800 tracking-tight mb-2">暖通设计管家</h2>
-                        <p className="text-slate-400 font-bold text-sm tracking-wide">{isLogin ? '智享高效协同设计流程' : '加入专业的暖通设计协作平台'}</p>
+                        <p className="text-slate-400 font-bold text-sm tracking-wide">内部设计过程记录平台</p>
                     </div>
 
                     {error && (
@@ -71,17 +64,12 @@ export const Auth: React.FC = () => {
                             type="submit"
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-2xl shadow-blue-100 transform active:scale-[0.98] transition-all duration-200 mt-4 tracking-widest uppercase text-sm"
                         >
-                            {isLogin ? '进入工作空间' : '创建新账户'}
+                            进入工作空间
                         </button>
                     </form>
 
                     <div className="mt-10 text-center">
-                        <button
-                            onClick={() => setIsLogin(!isLogin)}
-                            className="text-xs font-black text-slate-400 hover:text-blue-600 transition tracking-widest uppercase"
-                        >
-                            {isLogin ? '还没有账户？立即注册' : '已有账户？返回登录'}
-                        </button>
+                        <span className="text-xs font-black text-slate-400 tracking-widest uppercase">账号由管理员统一创建</span>
                     </div>
                 </div>
 
@@ -91,8 +79,9 @@ export const Auth: React.FC = () => {
                         <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest bg-slate-900 px-2 py-1 rounded">Debug Mode</span>
                     </div>
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 px-1">快速切换测试账户</label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                         {[
+                            { name: 'admin', label: '管理员', color: 'bg-slate-500' },
                             { name: 'user1', label: '设计师 A', color: 'bg-emerald-500' },
                             { name: 'user2', label: '设计师 B', color: 'bg-violet-500' },
                             { name: 'user3', label: '设计师 C', color: 'bg-blue-600' }
@@ -109,7 +98,7 @@ export const Auth: React.FC = () => {
                             </button>
                         ))}
                     </div>
-                    <p className="mt-6 text-[9px] text-slate-600 font-bold text-center italic">测试账户密码默认为: password123</p>
+                    <p className="mt-6 text-[9px] text-slate-600 font-bold text-center italic">测试账户密码默认为: 123456</p>
                 </div>
             </div>
         </div>
