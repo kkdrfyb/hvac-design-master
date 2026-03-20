@@ -1,0 +1,12 @@
+name: hvac-design
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - nodejs=20
+  - fastapi
+  - uvicorn
+  - python-jose
+  - bcrypt
+  - python-dotenv
+  - python-multipart
