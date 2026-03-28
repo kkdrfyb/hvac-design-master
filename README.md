@@ -40,14 +40,19 @@
 ### 一键启动
 
 直接运行 `start_all.bat`：
-- 自动检查 conda 环境 `hvac-design`（不存在会创建，存在会更新依赖）
+- 自动检查 conda 环境 `hvac-design`（不存在会创建，存在默认快速启动，不更新依赖）
 - 自动解析 conda 环境路径，并直接调用该环境内 `python.exe` 与 `npm.cmd`
 - 自动检查前端依赖（`node_modules` 不存在会安装）
 - 启动后端（3001）和前端（3000）两个窗口
 - 默认自动打开浏览器到 `http://localhost:3000/`
 - 脚本输出为英文（已改为纯 ASCII，避免中文编码导致 bat 解析异常）
 
-如不想每次都更新 conda 依赖，可在执行前设置：
+默认不会在启动时执行 `conda env update`，这样双击启动更快。
+
+如需强制更新 conda 依赖，可在执行前设置：
+`set FORCE_ENV_UPDATE=1`
+
+兼容旧参数：
 `set SKIP_ENV_UPDATE=1`
 
 如不希望脚本自动打开浏览器，可设置：
@@ -87,3 +92,7 @@
 5. 如果前端窗口报错包含 `__conda_tmp_xxx.txt`、`Failed to run conda activate`：
    - 这是 `conda run` 在 Windows 上的临时文件冲突问题；
    - 当前脚本已绕开该问题（直接调用环境内 `npm.cmd`），请确保你运行的是最新脚本。
+6. 如果双击 `start_all.bat` 长时间停在 `Collecting package metadata`：
+   - 这是 conda 在执行环境更新；
+   - 当前脚本默认已改为“快速启动不更新依赖”；
+   - 只有在你显式设置 `FORCE_ENV_UPDATE=1` 时才会重新解析依赖。

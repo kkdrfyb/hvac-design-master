@@ -40,6 +40,34 @@ export interface OperationLog {
   detail?: string;
 }
 
+export interface DesignSpecTemplate {
+  id: string;
+  name: string;
+  projectType: ProjectType;
+  stage: DesignStage;
+  description?: string;
+  mappingJson?: string;
+  docxFile?: SubmissionFile;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface DesignSpecOutput {
+  docx?: SubmissionFile;
+  pdf?: SubmissionFile;
+  dwgFiles?: SubmissionFile[];
+}
+
+export interface DesignSpecInstance {
+  id: string;
+  templateId: string;
+  stage: DesignStage;
+  payload: Record<string, any>;
+  createdBy: string;
+  createdAt: string;
+  outputs: DesignSpecOutput;
+}
+
 export interface TemplateItem {
   id: string;
   content: string;
@@ -94,6 +122,7 @@ export interface SubProject {
   enabledCategoryIds: string[];
   tasks: TaskItem[];
   operationLogs: OperationLog[];
+  designSpecs?: DesignSpecInstance[];
 }
 
 export interface MainProject {
@@ -101,6 +130,7 @@ export interface MainProject {
   name: string;
   code: string;
   subProjects: SubProject[];
+  designSpecTemplates?: DesignSpecTemplate[];
 }
 
 export interface NewProjectDraft {
@@ -113,6 +143,6 @@ export interface NewProjectDraft {
   enabledCategoryIds: string[];
 }
 
-export type ViewState = 'dashboard' | 'regulations' | 'errors';
+export type ViewState = 'process' | 'dashboard' | 'templates' | 'regulations' | 'errors';
 
 export type ThemeColor = 'blue' | 'emerald' | 'rose' | 'violet';

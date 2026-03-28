@@ -757,8 +757,178 @@ def _build_file_meta(
     }
 
 
+def _escape_xml_text(text: str) -> str:
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
+
+
+def _generate_docx(text: str, output_path: Path) -> None:
+    paragraphs = [
+        f"<w:p><w:r><w:t>{_escape_xml_text(line)}</w:t></w:r></w:p>"
+        for line in text.splitlines() if line.strip() != ""
+    ]
+    if not paragraphs:
+        paragraphs = ["<w:p><w:r><w:t> </w:t></w:r></w:p>"]
+
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        "<w:body>"
+        + "".join(paragraphs)
+        + '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>'
+        "</w:body></w:document>"
+    )
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/word/document.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+        "</Types>"
+    )
+    rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+        'Target="word/document.xml"/>'
+        "</Relationships>"
+    )
+
+    with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as docx:
+        docx.writestr("[Content_Types].xml", content_types)
+        docx.writestr("_rels/.rels", rels)
+        docx.writestr("word/document.xml", document_xml)
+
+
+def _generate_pdf(text: str, output_path: Path) -> None:
+    lines = [line.replace("(", "\\(").replace(")", "\\)") for line in text.splitlines() if line.strip()]
+    if not lines:
+        lines = [" "]
+    content_lines = []
+    y = 760
+    for line in lines:
+        content_lines.append(f"72 {y} Td ({line}) Tj")
+        y -= 16
+    content_stream = "BT /F1 12 Tf " + " ".join(content_lines) + " ET"
+    content_bytes = content_stream.encode("utf-8")
+
+    objects = []
+    objects.append(b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n")
+    objects.append(b"2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n")
+    objects.append(
+        b"3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+        b"/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj\n"
+    )
+    objects.append(
+        f"4 0 obj << /Length {len(content_bytes)} >> stream\n".encode("utf-8")
+        + content_bytes
+        + b"\nendstream endobj\n"
+    )
+    objects.append(b"5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n")
+
+    offsets = []
+    pdf = io.BytesIO()
+    pdf.write(b"%PDF-1.4\n")
+    for obj in objects:
+        offsets.append(pdf.tell())
+        pdf.write(obj)
+    xref_offset = pdf.tell()
+    pdf.write(f"xref\n0 {len(objects)+1}\n".encode("utf-8"))
+    pdf.write(b"0000000000 65535 f \n")
+    for offset in offsets:
+        pdf.write(f"{offset:010d} 00000 n \n".encode("utf-8"))
+    pdf.write(
+        f"trailer << /Size {len(objects)+1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF".encode("utf-8")
+    )
+    output_path.write_bytes(pdf.getvalue())
+
+
+def _store_generated_file(
+    db: sqlite3.Connection,
+    *,
+    user: Dict[str, Any],
+    project_id: str,
+    sub_project_id: str,
+    task_id: str,
+    stage: str,
+    original_name: str,
+    content_writer: callable,
+    source: str,
+) -> Dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    uploaded_at = now.isoformat()
+    upload_dir = UPLOAD_ROOT / str(user["id"]) / project_id / sub_project_id / task_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_id = uuid4().hex
+    stored_name = f"{file_id}_{_safe_basename(original_name)}"
+    stored_path = upload_dir / stored_name
+    content_writer(stored_path)
+    size = stored_path.stat().st_size
+
+    relative_path = stored_path.relative_to(SERVER_DIR).as_posix()
+    mime_type = "application/octet-stream"
+    if original_name.lower().endswith(".docx"):
+        mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif original_name.lower().endswith(".pdf"):
+        mime_type = "application/pdf"
+
+    db.execute(
+        """
+        INSERT INTO files (
+          id, user_id, project_id, sub_project_id, task_id,
+          stage, version, original_name, stored_name, relative_path,
+          mime_type, size, uploaded_at, uploaded_by, source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            file_id,
+            user["id"],
+            project_id,
+            sub_project_id,
+            task_id,
+            stage,
+            "AUTO",
+            original_name,
+            stored_name,
+            relative_path,
+            mime_type,
+            size,
+            uploaded_at,
+            user["username"],
+            source,
+        ),
+    )
+
+    return _build_file_meta(
+        file_id=file_id,
+        original_name=original_name,
+        size=size,
+        uploaded_at=uploaded_at,
+        uploaded_by=user["username"],
+        source=source,
+    )
+
+
 def _collect_referenced_file_ids(project_data: Dict[str, Any]) -> set[str]:
     file_ids: set[str] = set()
+    templates = project_data.get("designSpecTemplates")
+    if isinstance(templates, list):
+        for template in templates:
+            if not isinstance(template, dict):
+                continue
+            docx = template.get("docxFile")
+            if isinstance(docx, dict):
+                file_id = docx.get("id")
+                if isinstance(file_id, str) and file_id:
+                    file_ids.add(file_id)
     sub_projects = project_data.get("subProjects")
     if not isinstance(sub_projects, list):
         return file_ids
@@ -780,6 +950,26 @@ def _collect_referenced_file_ids(project_data: Dict[str, Any]) -> set[str]:
                     file_id = file_entry.get("id")
                     if isinstance(file_id, str) and file_id:
                         file_ids.add(file_id)
+        design_specs = sub_project.get("designSpecs") if isinstance(sub_project, dict) else None
+        if isinstance(design_specs, list):
+            for spec in design_specs:
+                if not isinstance(spec, dict):
+                    continue
+                outputs = spec.get("outputs")
+                if isinstance(outputs, dict):
+                    for key in ("docx", "pdf"):
+                        file_meta = outputs.get(key)
+                        if isinstance(file_meta, dict):
+                            file_id = file_meta.get("id")
+                            if isinstance(file_id, str) and file_id:
+                                file_ids.add(file_id)
+                    dwg_files = outputs.get("dwgFiles")
+                    if isinstance(dwg_files, list):
+                        for file_meta in dwg_files:
+                            if isinstance(file_meta, dict):
+                                file_id = file_meta.get("id")
+                                if isinstance(file_id, str) and file_id:
+                                    file_ids.add(file_id)
     return file_ids
 
 
@@ -938,6 +1128,389 @@ async def upload_task_files(
 
     return {"taskId": task_id, "version": version_entry, "task": task}
 
+
+@app.post("/api/projects/{project_id}/design-spec-templates")
+async def create_design_spec_template(
+    project_id: str,
+    files: list[UploadFile] = File(...),
+    name: str = Form(...),
+    project_type: str = Form(..., alias="projectType"),
+    stage: str = Form(...),
+    description: str = Form(""),
+    mapping_json: str = Form("", alias="mappingJson"),
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="No template file uploaded")
+
+    incoming = files[0]
+    template_id = uuid4().hex
+    now = datetime.now(timezone.utc).isoformat()
+    upload_dir = UPLOAD_ROOT / str(user["id"]) / project_id / "design-spec-templates"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    original_name = _safe_basename(incoming.filename or "design-spec-template.docx")
+    stored_name = f"{template_id}_{original_name}"
+    stored_path = upload_dir / stored_name
+    try:
+        with stored_path.open("wb") as out_file:
+            shutil.copyfileobj(incoming.file, out_file)
+        size = stored_path.stat().st_size
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Write file failed: {exc}")
+
+    if size > MAX_UPLOAD_FILE_SIZE:
+        try:
+            stored_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large: {original_name}. Limit is {MAX_UPLOAD_FILE_SIZE // (1024 * 1024)}MB",
+        )
+
+    relative_path = stored_path.relative_to(SERVER_DIR).as_posix()
+    mime_type = incoming.content_type or "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+    with get_db() as db:
+        project_row = db.execute(
+            "SELECT * FROM projects WHERE id = ?",
+            (project_id,),
+        ).fetchone()
+        if not project_row:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        project_data = _load_project_data(project_row)
+        templates = project_data.get("designSpecTemplates")
+        if not isinstance(templates, list):
+            templates = []
+
+        file_id = uuid4().hex
+        db.execute(
+            """
+            INSERT INTO files (
+              id, user_id, project_id, sub_project_id, task_id,
+              stage, version, original_name, stored_name, relative_path,
+              mime_type, size, uploaded_at, uploaded_by, source
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                file_id,
+                user["id"],
+                project_id,
+                "global",
+                f"design-spec-template-{template_id}",
+                stage,
+                "T",
+                original_name,
+                stored_name,
+                relative_path,
+                mime_type,
+                size,
+                now,
+                user["username"],
+                "design-spec-template",
+            ),
+        )
+
+        file_meta = _build_file_meta(
+            file_id=file_id,
+            original_name=original_name,
+            size=size,
+            uploaded_at=now,
+            uploaded_by=user["username"],
+            source="design-spec-template",
+        )
+
+        template = {
+            "id": template_id,
+            "name": name.strip(),
+            "projectType": project_type,
+            "stage": stage,
+            "description": description.strip() if isinstance(description, str) else "",
+            "mappingJson": mapping_json.strip() if isinstance(mapping_json, str) else "",
+            "docxFile": file_meta,
+            "createdBy": user["username"],
+            "createdAt": now,
+        }
+
+        templates = [template, *templates]
+        project_data["designSpecTemplates"] = templates
+
+        db.execute(
+            """
+            UPDATE projects
+            SET data = ?
+            WHERE id = ?
+            """,
+            (json.dumps(project_data, ensure_ascii=False), project_id),
+        )
+        _sync_project_files(db, project_id=project_id, project_data=project_data)
+
+    return {"template": template}
+
+
+def _render_design_spec_text(
+    *,
+    project: Dict[str, Any],
+    sub_project: Dict[str, Any],
+    template: Dict[str, Any],
+    payload: Dict[str, Any],
+) -> str:
+    lines = [
+        f"设计说明模板：{template.get('name', '')}",
+        f"项目：{project.get('name', '')} ({project.get('code', '')})",
+        f"子项：{sub_project.get('name', '')} ({sub_project.get('code', '')})",
+        f"阶段：{payload.get('阶段', sub_project.get('stage', ''))}",
+        "",
+        "关键数据：",
+    ]
+    for key, value in payload.items():
+        lines.append(f"- {key}: {value}")
+    if not payload:
+        lines.append("- （无关键数据）")
+    return "\n".join(lines)
+
+
+@app.post("/api/projects/{project_id}/subprojects/{sub_project_id}/design-specs/generate")
+async def generate_design_spec(
+    project_id: str,
+    sub_project_id: str,
+    request: Request,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    data = await request.json()
+    template_id = (data.get("templateId") or "").strip()
+    stage = (data.get("stage") or "").strip()
+    payload = data.get("payload") or {}
+    if not template_id:
+        raise HTTPException(status_code=400, detail="templateId is required")
+    if not stage:
+        raise HTTPException(status_code=400, detail="stage is required")
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="payload must be an object")
+
+    with get_db() as db:
+        project_row = db.execute(
+            "SELECT * FROM projects WHERE id = ?",
+            (project_id,),
+        ).fetchone()
+        if not project_row:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        project_data = _load_project_data(project_row)
+        sub_projects = project_data.get("subProjects")
+        if not isinstance(sub_projects, list):
+            raise HTTPException(status_code=400, detail="Project has no subProjects")
+
+        sub_project = next((sp for sp in sub_projects if sp.get("id") == sub_project_id), None)
+        if not sub_project:
+            raise HTTPException(status_code=404, detail="SubProject not found")
+
+        templates = project_data.get("designSpecTemplates") or []
+        template = next((t for t in templates if t.get("id") == template_id), None)
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+
+        now = datetime.now(timezone.utc).isoformat()
+        spec_id = uuid4().hex
+        content = _render_design_spec_text(
+            project=project_data,
+            sub_project=sub_project,
+            template=template,
+            payload=payload,
+        )
+
+        docx_meta = _store_generated_file(
+            db,
+            user=user,
+            project_id=project_id,
+            sub_project_id=sub_project_id,
+            task_id=f"design-spec-{spec_id}",
+            stage=stage,
+            original_name=f"{sub_project.get('name', 'sub')}_{stage}_设计说明.docx",
+            content_writer=lambda path: _generate_docx(content, path),
+            source="design-spec",
+        )
+        pdf_meta = _store_generated_file(
+            db,
+            user=user,
+            project_id=project_id,
+            sub_project_id=sub_project_id,
+            task_id=f"design-spec-{spec_id}",
+            stage=stage,
+            original_name=f"{sub_project.get('name', 'sub')}_{stage}_设计说明.pdf",
+            content_writer=lambda path: _generate_pdf(content, path),
+            source="design-spec",
+        )
+
+        spec = {
+            "id": spec_id,
+            "templateId": template_id,
+            "stage": stage,
+            "payload": payload,
+            "createdBy": user["username"],
+            "createdAt": now,
+            "outputs": {
+                "docx": docx_meta,
+                "pdf": pdf_meta,
+                "dwgFiles": [],
+            },
+        }
+
+        design_specs = sub_project.get("designSpecs")
+        if not isinstance(design_specs, list):
+            design_specs = []
+        sub_project["designSpecs"] = [spec, *design_specs]
+
+        db.execute(
+            """
+            UPDATE projects
+            SET data = ?
+            WHERE id = ?
+            """,
+            (json.dumps(project_data, ensure_ascii=False), project_id),
+        )
+        _sync_project_files(db, project_id=project_id, project_data=project_data)
+
+    return {"designSpec": spec}
+
+
+@app.post("/api/projects/{project_id}/subprojects/{sub_project_id}/design-specs/{spec_id}/dwg-fill")
+async def fill_dwg_frames(
+    project_id: str,
+    sub_project_id: str,
+    spec_id: str,
+    request: Request,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    data = await request.json()
+    file_ids = data.get("fileIds") or []
+    if not isinstance(file_ids, list) or not file_ids:
+        raise HTTPException(status_code=400, detail="fileIds is required")
+
+    with get_db() as db:
+        project_row = db.execute(
+            "SELECT * FROM projects WHERE id = ?",
+            (project_id,),
+        ).fetchone()
+        if not project_row:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        project_data = _load_project_data(project_row)
+        sub_projects = project_data.get("subProjects")
+        if not isinstance(sub_projects, list):
+            raise HTTPException(status_code=400, detail="Project has no subProjects")
+
+        sub_project = next((sp for sp in sub_projects if sp.get("id") == sub_project_id), None)
+        if not sub_project:
+            raise HTTPException(status_code=404, detail="SubProject not found")
+
+        design_specs = sub_project.get("designSpecs")
+        if not isinstance(design_specs, list):
+            raise HTTPException(status_code=400, detail="No design specs found")
+
+        spec = next((item for item in design_specs if item.get("id") == spec_id), None)
+        if not spec:
+            raise HTTPException(status_code=404, detail="Design spec not found")
+
+        placeholders = ",".join(["?"] * len(file_ids))
+        rows = db.execute(
+            f"""
+            SELECT id, original_name, relative_path, stage
+            FROM files
+            WHERE project_id = ? AND id IN ({placeholders})
+            """,
+            (project_id, *file_ids),
+        ).fetchall()
+        if not rows:
+            raise HTTPException(status_code=404, detail="No DWG files found")
+
+        outputs = spec.get("outputs") if isinstance(spec.get("outputs"), dict) else {}
+        dwg_outputs = outputs.get("dwgFiles")
+        if not isinstance(dwg_outputs, list):
+            dwg_outputs = []
+
+        now = datetime.now(timezone.utc)
+        uploaded_at = now.isoformat()
+        upload_dir = UPLOAD_ROOT / str(user["id"]) / project_id / sub_project_id / f"design-spec-{spec_id}-dwg"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        for row in rows:
+            relative_path = row["relative_path"]
+            file_path = (SERVER_DIR / relative_path).resolve()
+            try:
+                file_path.relative_to(SERVER_DIR)
+            except ValueError:
+                continue
+            if not file_path.exists():
+                continue
+
+            original_name = _safe_basename(row["original_name"])
+            stem = Path(original_name).stem
+            suffix = Path(original_name).suffix or ".dwg"
+            new_name = f"{stem}_filled{suffix}"
+            file_id = uuid4().hex
+            stored_name = f"{file_id}_{new_name}"
+            stored_path = upload_dir / stored_name
+            shutil.copyfile(file_path, stored_path)
+            size = stored_path.stat().st_size
+            relative_new_path = stored_path.relative_to(SERVER_DIR).as_posix()
+
+            db.execute(
+                """
+                INSERT INTO files (
+                  id, user_id, project_id, sub_project_id, task_id,
+                  stage, version, original_name, stored_name, relative_path,
+                  mime_type, size, uploaded_at, uploaded_by, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    file_id,
+                    user["id"],
+                    project_id,
+                    sub_project_id,
+                    f"design-spec-{spec_id}-dwg",
+                    row["stage"] or sub_project.get("stage"),
+                    "AUTO",
+                    new_name,
+                    stored_name,
+                    relative_new_path,
+                    "application/octet-stream",
+                    size,
+                    uploaded_at,
+                    user["username"],
+                    "dwg-fill",
+                ),
+            )
+
+            dwg_outputs.append(
+                _build_file_meta(
+                    file_id=file_id,
+                    original_name=new_name,
+                    size=size,
+                    uploaded_at=uploaded_at,
+                    uploaded_by=user["username"],
+                    source="dwg-fill",
+                )
+            )
+
+        outputs["dwgFiles"] = dwg_outputs
+        spec["outputs"] = outputs
+
+        sub_project["designSpecs"] = design_specs
+
+        db.execute(
+            """
+            UPDATE projects
+            SET data = ?
+            WHERE id = ?
+            """,
+            (json.dumps(project_data, ensure_ascii=False), project_id),
+        )
+        _sync_project_files(db, project_id=project_id, project_data=project_data)
+
+    return {"designSpec": spec}
 
 @app.delete("/api/projects/{project_id}/subprojects/{sub_project_id}/tasks/{task_id}/versions/{version}")
 def delete_task_version(

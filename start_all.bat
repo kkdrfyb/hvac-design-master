@@ -5,6 +5,7 @@ title HVAC Design Master - One Click Start
 set "ENV_NAME=hvac-design"
 set "PROJECT_ROOT=%~dp0"
 set "SKIP_ENV_UPDATE=%SKIP_ENV_UPDATE%"
+set "FORCE_ENV_UPDATE=%FORCE_ENV_UPDATE%"
 set "SKIP_AUTO_OPEN=%SKIP_AUTO_OPEN%"
 
 echo ========================================================
@@ -37,15 +38,18 @@ if errorlevel 1 (
         goto :FAIL
     )
 ) else (
-    if /I "%SKIP_ENV_UPDATE%"=="1" (
-        echo       Skip update enabled by SKIP_ENV_UPDATE=1
-    ) else (
-        echo       Environment exists, updating dependencies...
+    if /I "%FORCE_ENV_UPDATE%"=="1" (
+        echo       FORCE_ENV_UPDATE=1, updating dependencies...
         call conda env update -n %ENV_NAME% -f environment.yml --prune
         if errorlevel 1 (
             echo [ERROR] Failed to update conda environment.
             goto :FAIL
         )
+    ) else if /I "%SKIP_ENV_UPDATE%"=="1" (
+        echo       SKIP_ENV_UPDATE=1, skip dependency update.
+    ) else (
+        echo       Environment exists, quick start enabled. Skip dependency update.
+        echo       To update dependencies manually: set FORCE_ENV_UPDATE=1 ^&^& start_all.bat
     )
 )
 

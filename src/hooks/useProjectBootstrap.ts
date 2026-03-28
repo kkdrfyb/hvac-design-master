@@ -32,6 +32,9 @@ export const useProjectBootstrap = ({ userId, ensureValidSubProject }: UseProjec
         if (Array.isArray(data) && data.length > 0) {
           const validatedData = data.map(mainProject => ({
             ...mainProject,
+            designSpecTemplates: Array.isArray(mainProject.designSpecTemplates)
+              ? mainProject.designSpecTemplates
+              : [],
             subProjects:
               Array.isArray(mainProject.subProjects) && mainProject.subProjects.length > 0
                 ? mainProject.subProjects.map(ensureValidSubProject)

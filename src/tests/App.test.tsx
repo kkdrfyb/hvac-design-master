@@ -24,7 +24,7 @@ vi.mock('../api', () => ({
 describe('HVAC Design Master App', () => {
     it('renders the main dashboard correctly', async () => {
         render(<App />);
-        const titles = await screen.findAllByText('子项主页');
+        const titles = await screen.findAllByText('设计过程');
         expect(titles.length).toBeGreaterThan(0);
     });
 

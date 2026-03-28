@@ -364,6 +364,7 @@ export const INITIAL_PROJECTS: MainProject[] = [
     id: 'mp1',
     name: '田湾核电项目',
     code: '0603',
+    designSpecTemplates: [],
     subProjects: [
       {
         id: 'sp1',
@@ -375,6 +376,7 @@ export const INITIAL_PROJECTS: MainProject[] = [
       enabledCategoryIds: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id),
       tasks: buildTasksFromTemplate('附属工业厂房', '初步设计', TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id)),
       operationLogs: [],
+      designSpecs: [],
       }
     ]
   }

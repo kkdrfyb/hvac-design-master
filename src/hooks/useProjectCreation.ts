@@ -59,6 +59,7 @@ export const useProjectCreation = ({
       enabledCategoryIds,
       tasks: buildTasksFromTemplate(newProjectData.type, newProjectData.stage, enabledCategoryIds),
       operationLogs: [],
+      designSpecs: [],
     };
 
     const existingMain = projects.find(project => project.name === newProjectData.mainName);
@@ -78,6 +79,7 @@ export const useProjectCreation = ({
         id: `mp_${Date.now()}`,
         name: newProjectData.mainName,
         code: newProjectData.mainCode,
+        designSpecTemplates: [],
         subProjects: [newSub],
       };
       setProjects([...projects, newMain]);

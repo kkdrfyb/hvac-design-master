@@ -1,13 +1,15 @@
 import './index.css';
 import React, { useState, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
-import { ViewState, SubProject, ThemeColor, DesignStage, ProjectType } from './types';
+import { ViewState, SubProject, ThemeColor, DesignStage, ProjectType, MainProject } from './types';
 import { INITIAL_PROJECTS, TEMPLATE_CATEGORIES, buildTasksFromTemplate } from './constants';
 import { useAuth } from './context/AuthContext';
 import { Auth } from './components/Auth';
 import DashboardView from './components/dashboard/DashboardView';
 import RegulationsView from './components/RegulationsView';
 import ErrorsView from './components/ErrorsView';
+import DesignProcessView from './components/process/DesignProcessView';
+import TemplatesView from './components/templates/TemplatesView';
 import NewProjectModal from './components/NewProjectModal';
 import AddTaskModal from './components/AddTaskModal';
 import { useProjectCreation } from './hooks/useProjectCreation';
@@ -39,11 +41,14 @@ const ensureValidSubProject = (sp: Partial<SubProject> | any): SubProject => {
             versions: Array.isArray(t?.versions) ? t.versions : []
         })) : buildTasksFromTemplate(type, stage, enabledCategoryIds),
         operationLogs: Array.isArray(sp?.operationLogs) ? sp.operationLogs : [],
+        designSpecs: Array.isArray(sp?.designSpecs) ? sp.designSpecs : [],
     };
 };
 
 const VIEW_TITLES: Record<ViewState, string> = {
+    process: '设计过程',
     dashboard: '子项主页',
+    templates: '模板管理',
     regulations: '规范条文',
     errors: '设计常见问题'
 };
@@ -56,7 +61,7 @@ const App: React.FC = () => {
     const [passwordError, setPasswordError] = useState('');
 
     // Global View State
-    const [currentView, setCurrentView] = useState<ViewState>('dashboard');
+    const [currentView, setCurrentView] = useState<ViewState>('process');
     const theme: ThemeColor = 'blue';
 
     const {
@@ -89,6 +94,24 @@ const App: React.FC = () => {
         setProjects,
         ensureValidSubProject
     });
+
+    const updateCurrentMainProject = (updater: (main: MainProject) => MainProject) => {
+        setProjects(prevProjects => {
+            const nextProjects = prevProjects.map(mainProject => {
+                if (mainProject.id === currentMainId) {
+                    return updater(mainProject);
+                }
+                return mainProject;
+            });
+
+            const updatedMain = nextProjects.find(project => project.id === currentMainId);
+            if (updatedMain) {
+                api.post('/projects', updatedMain).catch(error => console.error('Auto-save failed', error));
+            }
+
+            return nextProjects;
+        });
+    };
 
     const {
         activeStage,
@@ -207,6 +230,30 @@ const App: React.FC = () => {
     };
 
     const currentViewContent = {
+        process: (
+            <DesignProcessView
+                logs={currentSub.operationLogs}
+                actorName={user?.username || 'system'}
+                onAddNote={(content) => {
+                    updateCurrentSubProject(sub => {
+                        const now = new Date().toISOString();
+                        const nextLog = {
+                            id: `log_${Date.now()}`,
+                            action: '设计备注',
+                            actor: user?.username || 'system',
+                            createdAt: now,
+                            targetType: 'comment',
+                            targetId: 'note',
+                            detail: content,
+                        };
+                        return {
+                            ...sub,
+                            operationLogs: [nextLog, ...(sub.operationLogs || [])],
+                        };
+                    });
+                }}
+            />
+        ),
         dashboard: (
             <DashboardView
                 currentMain={currentMain}
@@ -268,6 +315,15 @@ const App: React.FC = () => {
                 isAdmin={isAdmin}
                 onCreateError={createError}
                 onDeleteError={deleteError}
+            />
+        ),
+        templates: (
+            <TemplatesView
+                theme={theme}
+                currentMain={currentMain}
+                currentSub={currentSub}
+                onUpdateMain={updateCurrentMainProject}
+                onUpdateSub={updateCurrentSubProject}
             />
         )
     }[currentView];
@@ -364,7 +420,7 @@ const App: React.FC = () => {
                             onSelectProject={(mainId, subId) => {
                                 setCurrentMainId(mainId);
                                 setCurrentSubId(subId);
-                                setCurrentView('dashboard');
+                                setCurrentView('process');
                             }}
                             onCreateProject={openNewProjectModal}
                             canCreateProject={user.role === 'admin'}
@@ -376,7 +432,9 @@ const App: React.FC = () => {
                         <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-2 mb-4 block">功能菜单</label>
                         <div className="space-y-1">
                             {[
+                                { id: 'process', label: '设计过程', icon: '📝' },
                                 { id: 'dashboard', label: '子项主页', icon: '📋' },
+                                { id: 'templates', label: '模板管理', icon: '📑' },
                                 { id: 'regulations', label: '规范条文', icon: '📜' },
                                 { id: 'errors', label: '设计常见问题', icon: '❗' }
                             ].map(item => (
@@ -425,7 +483,7 @@ const App: React.FC = () => {
                     </div>
 
                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        V1 结构化记录模式
+                        V3.1 设计说明模板
                     </div>
                 </header>
 
