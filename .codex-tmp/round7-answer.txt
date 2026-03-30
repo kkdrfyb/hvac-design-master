@@ -1,0 +1,14 @@
+已按这轮要求调整结构视图布局。
+
+主要改动：
+- `D:\python\hvac-design-master-main\src\components\dashboard\SubprojectStructureView.tsx`
+  - 删除“阶段切换后，直接查看分类细项、说明和最终版文件。”这句说明。
+  - 把阶段摘要块移入结构视图内部，放到阶段卡片行右侧，和阶段卡片内容对齐。
+  - 阶段摘要块继续保留：阶段名、状态、手动确认状态、完成细项、已有记录、最终版文件、确认按钮。
+- `D:\python\hvac-design-master-main\src\components\dashboard\DashboardView.tsx`
+  - 删除顶部控制区里原来的阶段摘要块，避免同一信息重复展示。
+  - 把结构视图所需的阶段确认信息改为传入 `SubprojectStructureView` 统一渲染。
+
+验证结果：
+- 定向 TypeScript 检查通过。
+- `npm test` 通过，8 个测试文件、16 个测试全部通过。

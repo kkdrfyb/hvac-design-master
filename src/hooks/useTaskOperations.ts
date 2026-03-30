@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { api } from '../api';
+import { getTaskLabel } from '../process';
 import { DesignStage, SubmissionFile, SubmissionVersion, SubProject, TaskGroup, TaskItem, TaskStatus } from '../types';
 
 interface AddTaskParams {
@@ -40,7 +41,7 @@ export const useTaskOperations = ({
   const appendOperationLog = (
     sp: SubProject,
     action: string,
-    targetType: 'stage' | 'task' | 'file' | 'comment',
+    targetType: 'stage' | 'task' | 'file' | 'comment' | 'process',
     targetId: string,
     detail?: string
   ): SubProject => {
@@ -59,10 +60,12 @@ export const useTaskOperations = ({
     };
   };
 
+  const findTask = (sp: SubProject, taskId: string) => sp.tasks.find(task => task.id === taskId);
+
   const toggleTask = (id: string) => {
     if (activeStage !== currentSub.stage) return;
     updateCurrentSubProject(sp => ({
-      ...appendOperationLog(sp, 'toggle_task_completed', 'task', id),
+      ...sp,
       tasks: sp.tasks.map(task => {
         if (task.id !== id) return task;
         return {
@@ -75,20 +78,17 @@ export const useTaskOperations = ({
 
   const setTaskStatus = (id: string, status: TaskStatus) => {
     if (activeStage !== currentSub.stage) return;
-    updateCurrentSubProject(sp => {
-      const next = {
-        ...sp,
-        tasks: sp.tasks.map(task => {
-          if (task.id !== id) return task;
-          return {
-            ...task,
-            status,
-            blockedReason: status === 'BLOCKED' ? (task.blockedReason || '') : undefined,
-          };
-        }),
-      };
-      return appendOperationLog(next, 'set_task_status', 'task', id, status);
-    });
+    updateCurrentSubProject(sp => ({
+      ...sp,
+      tasks: sp.tasks.map(task => {
+        if (task.id !== id) return task;
+        return {
+          ...task,
+          status,
+          blockedReason: status === 'BLOCKED' ? (task.blockedReason || '') : undefined,
+        };
+      }),
+    }));
   };
 
   const setTaskBlockedReason = (id: string, blockedReason: string) => {
@@ -126,7 +126,13 @@ export const useTaskOperations = ({
           };
         }),
       };
-      return appendOperationLog(next, 'add_task_comment', 'comment', taskId, trimmed.slice(0, 80));
+      return appendOperationLog(
+        next,
+        '补充任务说明',
+        'comment',
+        taskId,
+        `${getTaskLabel(findTask(next, taskId))}：${trimmed.slice(0, 120)}`
+      );
     });
   };
 
@@ -158,7 +164,7 @@ export const useTaskOperations = ({
         ...sp,
         tasks: sp.tasks.filter(task => task.id !== taskId),
       };
-      return appendOperationLog(next, 'delete_task', 'task', taskId);
+      return appendOperationLog(next, '删除执行事项', 'task', taskId, getTaskLabel(findTask(sp, taskId)));
     });
   };
 
@@ -182,7 +188,17 @@ export const useTaskOperations = ({
           return task;
         }),
       };
-      return appendOperationLog(next, 'upload_task_file', 'file', taskId);
+      const task = findTask(next, taskId);
+      const versionLabel = response?.version?.version || response?.task?.versions?.[0]?.version || '';
+      const uploadedFiles = Array.isArray(files) ? files : Array.from(files);
+      const fileNames = uploadedFiles.map(file => file.name).join('，');
+      return appendOperationLog(
+        next,
+        '上传设计文件',
+        'file',
+        taskId,
+        `${activeStage} · ${getTaskLabel(task)}${versionLabel ? ` · 版本 ${versionLabel}` : ''} · ${fileNames}`
+      );
     });
   };
 
@@ -190,7 +206,7 @@ export const useTaskOperations = ({
     if (activeStage !== currentSub.stage) return;
     const files = event.target.files;
     if (!files || files.length === 0) return;
-    const fileArray = Array.from(files);
+    const fileArray: File[] = Array.from(files);
     try {
       await applyTaskUpload(taskId, fileArray);
       setUploadErrors(prev => {
@@ -260,7 +276,13 @@ export const useTaskOperations = ({
             return { ...task, versions: task.versions.filter(v => v.version !== version) };
           }),
         };
-        return appendOperationLog(next, 'delete_task_version', 'file', taskId, version);
+        return appendOperationLog(
+          next,
+          '删除文件版本',
+          'file',
+          taskId,
+          `${getTaskLabel(findTask(sp, taskId))} · 版本 ${version}`
+        );
       });
     } catch (err) {
       console.error('Delete version failed', err);
@@ -298,7 +320,13 @@ export const useTaskOperations = ({
         ...sp,
         tasks: [...sp.tasks, newTask],
       };
-      return appendOperationLog(next, 'add_task', 'task', newTask.id, newTask.content.slice(0, 80));
+      return appendOperationLog(
+        next,
+        '新增执行事项',
+        'task',
+        newTask.id,
+        `${newTask.category} / ${newTask.content.slice(0, 120)}`
+      );
     });
 
     setAddTaskModalOpen(false);

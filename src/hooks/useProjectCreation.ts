@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { api } from '../api';
 import { buildTasksFromTemplate, TEMPLATE_CATEGORIES } from '../constants';
+import { getDefaultProcessStages } from '../process';
 import { DesignStage, MainProject, NewProjectDraft, ProjectType, SubProject } from '../types';
 
 interface UseProjectCreationOptions {
@@ -59,6 +60,8 @@ export const useProjectCreation = ({
       enabledCategoryIds,
       tasks: buildTasksFromTemplate(newProjectData.type, newProjectData.stage, enabledCategoryIds),
       operationLogs: [],
+      processStages: getDefaultProcessStages(newProjectData.stage),
+      processRecords: [],
       designSpecs: [],
     };
 

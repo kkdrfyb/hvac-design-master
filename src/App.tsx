@@ -1,7 +1,7 @@
 import './index.css';
 import React, { useState, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
-import { ViewState, SubProject, ThemeColor, DesignStage, ProjectType, MainProject } from './types';
+import { ViewState, SubProject, ThemeColor, DesignStage, ProjectType, MainProject, SubmissionFile } from './types';
 import { INITIAL_PROJECTS, TEMPLATE_CATEGORIES, buildTasksFromTemplate } from './constants';
 import { useAuth } from './context/AuthContext';
 import { Auth } from './components/Auth';
@@ -19,6 +19,8 @@ import { useStageNavigation } from './hooks/useStageNavigation';
 import { useProjectSync } from './hooks/useProjectSync';
 import { useProjectBootstrap } from './hooks/useProjectBootstrap';
 import { api } from './api';
+import { DESIGN_PROCESS_KIND_LABELS, getDefaultProcessStages, normalizeProcessKind } from './process';
+
 const ensureValidSubProject = (sp: Partial<SubProject> | any): SubProject => {
     const type: ProjectType = sp?.type || '其他';
     const stage: DesignStage = sp?.stage || '方案设计';
@@ -41,6 +43,24 @@ const ensureValidSubProject = (sp: Partial<SubProject> | any): SubProject => {
             versions: Array.isArray(t?.versions) ? t.versions : []
         })) : buildTasksFromTemplate(type, stage, enabledCategoryIds),
         operationLogs: Array.isArray(sp?.operationLogs) ? sp.operationLogs : [],
+        processStages: getDefaultProcessStages(
+            stage,
+            Array.isArray(sp?.stageHistory) ? sp.stageHistory : [],
+            Array.isArray(sp?.processStages) ? sp.processStages : [],
+            Array.isArray(sp?.processRecords) ? sp.processRecords.map((record: any) => record?.stage || '').filter(Boolean) : []
+        ),
+        processRecords: Array.isArray(sp?.processRecords)
+            ? sp.processRecords.map((record: any) => ({
+                ...record,
+                kind: normalizeProcessKind(record?.kind || 'NOTE', record?.subtype || record?.title || ''),
+                subtype: record?.subtype || '',
+                changeSummary: record?.changeSummary || '',
+                versions: Array.isArray(record?.versions) ? record.versions : [],
+            }))
+            : [],
+        stageConfirmations: sp?.stageConfirmations && typeof sp.stageConfirmations === 'object'
+            ? sp.stageConfirmations
+            : {},
         designSpecs: Array.isArray(sp?.designSpecs) ? sp.designSpecs : [],
     };
 };
@@ -229,36 +249,155 @@ const App: React.FC = () => {
         );
     };
 
+    const handleDownloadSubmissionFile = async (file: SubmissionFile) => {
+        const targetPath = file.downloadPath || (file.id ? `/files/${file.id}` : '');
+        if (!targetPath) return;
+        try {
+            const { blob, fileName } = await api.downloadFile(targetPath);
+            const downloadName = fileName || file.name || 'download.bin';
+            const blobUrl = window.URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = blobUrl;
+            anchor.download = downloadName;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error('File download failed', err);
+            alert('文件下载失败，请稍后重试。');
+        }
+    };
+
     const currentViewContent = {
         process: (
             <DesignProcessView
+                currentStage={currentSub.stage}
+                processStages={currentSub.processStages || []}
+                processRecords={currentSub.processRecords || []}
                 logs={currentSub.operationLogs}
                 actorName={user?.username || 'system'}
-                onAddNote={(content) => {
+                onUpdateRecordSummary={(recordId, changeSummary) => {
+                    updateCurrentSubProject(sub => ({
+                        ...sub,
+                        processRecords: (sub.processRecords || []).map(record =>
+                            record.id === recordId ? { ...record, changeSummary } : record
+                        ),
+                    }));
+                }}
+                onAddStage={(stageName) => {
                     updateCurrentSubProject(sub => {
+                        const normalized = stageName.trim();
+                        if (!normalized) return sub;
+                        const nextStages = Array.from(new Set([...(sub.processStages || []), normalized]));
                         const now = new Date().toISOString();
                         const nextLog = {
                             id: `log_${Date.now()}`,
-                            action: '设计备注',
+                            action: '新增设计阶段',
                             actor: user?.username || 'system',
                             createdAt: now,
-                            targetType: 'comment',
-                            targetId: 'note',
-                            detail: content,
+                            targetType: 'process' as const,
+                            targetId: normalized,
+                            detail: normalized,
                         };
                         return {
                             ...sub,
+                            processStages: nextStages,
+                            operationLogs: [nextLog, ...(sub.operationLogs || [])].slice(0, 300),
+                        };
+                    });
+                }}
+                onDeleteStage={(stageName) => {
+                    updateCurrentSubProject(sub => {
+                        if ((sub.processRecords || []).some(record => record.stage === stageName)) return sub;
+                        const nextStages = (sub.processStages || []).filter(item => item !== stageName);
+                        const now = new Date().toISOString();
+                        const nextLog = {
+                            id: `log_${Date.now()}`,
+                            action: '删除设计阶段',
+                            actor: user?.username || 'system',
+                            createdAt: now,
+                            targetType: 'process' as const,
+                            targetId: stageName,
+                            detail: stageName,
+                        };
+                        return {
+                            ...sub,
+                            processStages: nextStages,
+                            operationLogs: [nextLog, ...(sub.operationLogs || [])].slice(0, 300),
+                        };
+                    });
+                }}
+                onAddRecord={({ stage, kind, subtype, title, detail }) => {
+                    updateCurrentSubProject(sub => {
+                        const now = new Date().toISOString();
+                        const recordId = `process_${Date.now()}`;
+                        const nextLog = {
+                            id: `log_${Date.now()}`,
+                            action: '新增设计过程记录',
+                            actor: user?.username || 'system',
+                            createdAt: now,
+                            targetType: 'process' as const,
+                            targetId: recordId,
+                            detail: `${stage} · ${subtype || DESIGN_PROCESS_KIND_LABELS[kind]} · ${title}${detail ? `：${detail}` : ''}`,
+                        };
+                        return {
+                            ...sub,
+                            processStages: Array.from(new Set([...(sub.processStages || []), stage])),
+                            processRecords: [
+                                {
+                                    id: recordId,
+                                    stage,
+                                    kind,
+                                    subtype,
+                                    title,
+                                    detail,
+                                    changeSummary: '',
+                                    createdAt: now,
+                                    createdBy: user?.username || 'system',
+                                },
+                                ...(sub.processRecords || []),
+                            ],
                             operationLogs: [nextLog, ...(sub.operationLogs || [])],
                         };
                     });
                 }}
+                onUploadFiles={async ({ recordId, stage, kind, subtype, title, files }) => {
+                    const response = await api.uploadFiles(
+                        `/projects/${currentMainId}/subprojects/${currentSubId}/process-record-files`,
+                        files,
+                        {
+                            recordId,
+                            stage,
+                            kind,
+                            subtype,
+                            title,
+                        }
+                    );
+                    updateCurrentSubProject(sub => ({
+                        ...sub,
+                        processStages: Array.from(new Set([...(sub.processStages || []), stage])),
+                        processRecords: (sub.processRecords || []).map(record =>
+                            record.id === response.record.id ? { ...record, ...response.record } : record
+                        ).concat(
+                            (sub.processRecords || []).some(record => record.id === response.record.id) ? [] : [response.record]
+                        ),
+                        operationLogs: response.logs && Array.isArray(response.logs)
+                            ? [...response.logs, ...(sub.operationLogs || [])].slice(0, 300)
+                            : sub.operationLogs,
+                    }));
+                }}
+                onDownloadFile={handleDownloadSubmissionFile}
             />
         ),
         dashboard: (
             <DashboardView
+                actorName={user?.username || 'system'}
                 currentMain={currentMain}
                 currentSub={currentSub}
                 activeStage={activeStage}
+                processStages={currentSub.processStages || []}
+                processRecords={currentSub.processRecords || []}
                 stageOptions={stageOptions}
                 selectedCategoryId={selectedCategoryId}
                 showEmptyCategories={showEmptyCategories}
@@ -274,6 +413,32 @@ const App: React.FC = () => {
                 onExportProject={handleExportProject}
                 onSelectCategory={onSelectCategory}
                 onToggleShowEmptyCategories={onToggleShowEmptyCategories}
+                onUploadProcessFiles={async ({ recordId, stage, kind, subtype, title, files }) => {
+                    const response = await api.uploadFiles(
+                        `/projects/${currentMainId}/subprojects/${currentSubId}/process-record-files`,
+                        files,
+                        {
+                            recordId,
+                            stage,
+                            kind,
+                            subtype,
+                            title,
+                        }
+                    );
+                    updateCurrentSubProject(sub => ({
+                        ...sub,
+                        processStages: Array.from(new Set([...(sub.processStages || []), stage])),
+                        processRecords: (sub.processRecords || []).map(record =>
+                            record.id === response.record.id ? { ...record, ...response.record } : record
+                        ).concat(
+                            (sub.processRecords || []).some(record => record.id === response.record.id) ? [] : [response.record]
+                        ),
+                        operationLogs: response.logs && Array.isArray(response.logs)
+                            ? [...response.logs, ...(sub.operationLogs || [])].slice(0, 300)
+                            : sub.operationLogs,
+                    }));
+                }}
+                onDownloadProcessFile={handleDownloadSubmissionFile}
                 onOpenRegulations={() => setCurrentView('regulations')}
                 onOpenErrors={() => setCurrentView('errors')}
                 onToggleTask={toggleTask}
@@ -283,6 +448,33 @@ const App: React.FC = () => {
                 onUploadTaskFile={handleTaskFileUpload}
                 onRetryTaskUpload={retryTaskUpload}
                 uploadErrors={uploadErrors}
+                onToggleStageConfirmation={(stage, nextConfirmation) => {
+                    updateCurrentSubProject(sub => {
+                        const now = new Date().toISOString();
+                        const detail = nextConfirmation.confirmed
+                            ? `${stage} 已手动确认完成`
+                            : `${stage} 取消完成确认`;
+                        return {
+                            ...sub,
+                            stageConfirmations: {
+                                ...(sub.stageConfirmations || {}),
+                                [stage]: nextConfirmation,
+                            },
+                            operationLogs: [
+                                {
+                                    id: `log_${Date.now()}`,
+                                    action: nextConfirmation.confirmed ? '确认阶段完成' : '取消阶段完成确认',
+                                    actor: user?.username || 'system',
+                                    createdAt: now,
+                                    targetType: 'stage',
+                                    targetId: stage,
+                                    detail,
+                                },
+                                ...(sub.operationLogs || []),
+                            ].slice(0, 300),
+                        };
+                    });
+                }}
                 onDownloadFile={handleDownloadFile}
                 onDeleteVersion={handleDeleteVersion}
                 onDeleteTask={handleDeleteTask}

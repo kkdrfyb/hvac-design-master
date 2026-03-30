@@ -34,6 +34,8 @@ const baseSubProject: SubProject = {
     },
   ],
   operationLogs: [],
+  processRecords: [],
+  designSpecs: [],
 };
 
 describe('useTaskOperations', () => {
@@ -41,7 +43,7 @@ describe('useTaskOperations', () => {
     vi.clearAllMocks();
   });
 
-  it('toggles task completion through updater', () => {
+  it('toggles task completion through updater without adding process timeline noise', () => {
     const updateCurrentSubProject = vi.fn();
     const { result } = renderHook(() =>
       useTaskOperations({
@@ -62,8 +64,7 @@ describe('useTaskOperations', () => {
     const updater = updateCurrentSubProject.mock.calls[0][0] as (sp: SubProject) => SubProject;
     const updated = updater(baseSubProject);
     expect(updated.tasks[0].status).toBe('COMPLETED');
-    expect(updated.operationLogs[0]?.action).toBe('toggle_task_completed');
-    expect(updated.operationLogs[0]?.actor).toBe('tester');
+    expect(updated.operationLogs).toHaveLength(0);
   });
 
   it('opens add-task modal and confirms task creation', () => {
@@ -101,7 +102,7 @@ describe('useTaskOperations', () => {
     expect(updated.tasks[1].content).toBe('新增风险任务');
     expect(updated.tasks[1].categoryId).toBe('aux-risk');
     expect(updated.tasks[1].comments).toEqual([]);
-    expect(updated.operationLogs[0]?.action).toBe('add_task');
+    expect(updated.operationLogs[0]?.action).toBe('新增执行事项');
   });
 
   it('deletes version through API and applies updater response', async () => {
@@ -126,8 +127,8 @@ describe('useTaskOperations', () => {
     const updater = updateCurrentSubProject.mock.calls[0][0] as (sp: SubProject) => SubProject;
     const updated = updater(baseSubProject);
     expect(updated.tasks[0].versions).toEqual([]);
-    expect(updated.operationLogs[0]?.action).toBe('delete_task_version');
-    expect(updated.operationLogs[0]?.detail).toBe('A');
+    expect(updated.operationLogs[0]?.action).toBe('删除文件版本');
+    expect(updated.operationLogs[0]?.detail).toContain('版本 A');
   });
 
   it('adds comment and records operation log', () => {
@@ -153,6 +154,6 @@ describe('useTaskOperations', () => {
     expect(updated.tasks[0].comments).toHaveLength(1);
     expect(updated.tasks[0].comments[0].content).toBe('请补充接口条件来源');
     expect(updated.tasks[0].comments[0].author).toBe('tester');
-    expect(updated.operationLogs[0]?.action).toBe('add_task_comment');
+    expect(updated.operationLogs[0]?.action).toBe('补充任务说明');
   });
 });

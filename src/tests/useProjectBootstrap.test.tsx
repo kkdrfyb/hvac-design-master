@@ -21,6 +21,7 @@ const normalizeSubProject = (sp: Partial<SubProject> | any): SubProject => ({
   enabledCategoryIds: Array.isArray(sp?.enabledCategoryIds) ? sp.enabledCategoryIds : [],
   tasks: Array.isArray(sp?.tasks) ? sp.tasks : [],
   operationLogs: Array.isArray(sp?.operationLogs) ? sp.operationLogs : [],
+  processRecords: Array.isArray(sp?.processRecords) ? sp.processRecords : [],
   designSpecs: Array.isArray(sp?.designSpecs) ? sp.designSpecs : [],
 });
 

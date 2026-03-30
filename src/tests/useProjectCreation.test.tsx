@@ -21,6 +21,8 @@ const baseSubProject: SubProject = {
   enabledCategoryIds: TEMPLATE_CATEGORIES['附属工业厂房']['初步设计'].map(category => category.id),
   tasks: [],
   operationLogs: [],
+  processRecords: [],
+  designSpecs: [],
 };
 
 const baseProjects: MainProject[] = [
@@ -28,6 +30,7 @@ const baseProjects: MainProject[] = [
     id: 'mp1',
     name: '主项目A',
     code: 'M1',
+    designSpecTemplates: [],
     subProjects: [baseSubProject],
   },
 ];

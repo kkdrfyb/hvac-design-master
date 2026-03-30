@@ -1,5 +1,11 @@
 const API_URL = '/api';
 
+const resolveApiPath = (path: string) => {
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.startsWith(`${API_URL}/`) || path === API_URL) return path;
+    return `${API_URL}${path}`;
+};
+
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     return {
@@ -24,12 +30,12 @@ const getErrorMessage = async (res: Response) => {
 
 export const api = {
     async get(path: string) {
-        const res = await fetch(`${API_URL}${path}`, { headers: getAuthHeaders() });
+        const res = await fetch(resolveApiPath(path), { headers: getAuthHeaders() });
         if (!res.ok) throw new Error(await getErrorMessage(res));
         return res.json();
     },
     async post(path: string, body: any) {
-        const res = await fetch(`${API_URL}${path}`, {
+        const res = await fetch(resolveApiPath(path), {
             method: 'POST',
             headers: getJsonHeaders(),
             body: JSON.stringify(body)
@@ -38,7 +44,7 @@ export const api = {
         return res.json();
     },
     async put(path: string, body: any) {
-        const res = await fetch(`${API_URL}${path}`, {
+        const res = await fetch(resolveApiPath(path), {
             method: 'PUT',
             headers: getJsonHeaders(),
             body: JSON.stringify(body)
@@ -47,7 +53,7 @@ export const api = {
         return res.json();
     },
     async delete(path: string) {
-        const res = await fetch(`${API_URL}${path}`, {
+        const res = await fetch(resolveApiPath(path), {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
@@ -59,7 +65,7 @@ export const api = {
         Object.entries(fields).forEach(([key, value]) => formData.append(key, value));
         Array.from(files).forEach(file => formData.append('files', file));
 
-        const res = await fetch(`${API_URL}${path}`, {
+        const res = await fetch(resolveApiPath(path), {
             method: 'POST',
             headers: getAuthHeaders(),
             body: formData
@@ -68,15 +74,20 @@ export const api = {
         return res.json();
     },
     async downloadFile(path: string) {
-        const res = await fetch(`${API_URL}${path}`, {
+        const res = await fetch(resolveApiPath(path), {
             method: 'GET',
             headers: getAuthHeaders()
         });
         if (!res.ok) throw new Error(await getErrorMessage(res));
 
         const contentDisposition = res.headers.get('content-disposition') || '';
-        const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)/i);
-        const fileName = fileNameMatch ? decodeURIComponent(fileNameMatch[1]) : '';
+        const encodedMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+        const plainMatch = contentDisposition.match(/filename=["']?([^"';]+)["']?/i);
+        const fileName = encodedMatch
+            ? decodeURIComponent(encodedMatch[1])
+            : plainMatch
+                ? plainMatch[1]
+                : '';
         const blob = await res.blob();
         return { blob, fileName };
     }

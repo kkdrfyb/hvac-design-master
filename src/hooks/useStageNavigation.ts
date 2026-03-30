@@ -86,12 +86,12 @@ export const useStageNavigation = ({ currentSub, actorName, updateCurrentSubProj
         : [...sp.tasks, ...buildTasksFromTemplate(sp.type, nextStage, enabledCategoryIds)];
       const logEntry = {
         id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        action: 'advance_stage',
+        action: '阶段切换',
         actor: actorName,
         createdAt: new Date().toISOString(),
         targetType: 'stage' as const,
         targetId: nextStage,
-        detail: `${sp.stage} -> ${nextStage}`,
+        detail: `从 ${sp.stage} 切换到 ${nextStage}`,
       };
       return {
         ...sp,

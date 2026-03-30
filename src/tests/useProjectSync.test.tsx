@@ -20,6 +20,8 @@ const normalizeSubProject = (sp: Partial<SubProject> | any): SubProject => ({
   enabledCategoryIds: Array.isArray(sp?.enabledCategoryIds) ? sp.enabledCategoryIds : [],
   tasks: Array.isArray(sp?.tasks) ? sp.tasks : [],
   operationLogs: Array.isArray(sp?.operationLogs) ? sp.operationLogs : [],
+  processRecords: Array.isArray(sp?.processRecords) ? sp.processRecords : [],
+  designSpecs: Array.isArray(sp?.designSpecs) ? sp.designSpecs : [],
 });
 
 const baseProjects: MainProject[] = [
@@ -27,6 +29,7 @@ const baseProjects: MainProject[] = [
     id: 'mp1',
     name: '主项目A',
     code: 'M1',
+    designSpecTemplates: [],
     subProjects: [
       {
         id: 'sp1',
@@ -38,6 +41,8 @@ const baseProjects: MainProject[] = [
         enabledCategoryIds: [],
         tasks: [],
         operationLogs: [],
+        processRecords: [],
+        designSpecs: [],
       },
     ],
   },

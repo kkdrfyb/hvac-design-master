@@ -1,4 +1,4 @@
-export type DesignStage = '方案设计' | '初步设计' | '施工图设计';
+export type DesignStage = string;
 
 export type ProjectType = '核岛厂房' | '附属工业厂房' | '其他';
 
@@ -35,9 +35,32 @@ export interface OperationLog {
   action: string;
   actor: string;
   createdAt: string;
-  targetType: 'stage' | 'task' | 'file' | 'comment';
+  targetType: 'stage' | 'task' | 'file' | 'comment' | 'process';
   targetId: string;
   detail?: string;
+}
+
+export type DesignProcessKind =
+  | 'INPUT'
+  | 'RECEIVED_INTERFACE'
+  | 'CALCULATION'
+  | 'INTERFACE'
+  | 'DELIVERABLE'
+  | 'POST_ISSUE'
+  | 'NOTE';
+
+export interface DesignProcessRecord {
+  id: string;
+  stage: DesignStage;
+  kind: DesignProcessKind;
+  subtype?: string;
+  title: string;
+  detail?: string;
+  changeSummary?: string;
+  createdAt: string;
+  createdBy: string;
+  relatedTaskId?: string;
+  versions?: SubmissionVersion[];
 }
 
 export interface DesignSpecTemplate {
@@ -66,6 +89,12 @@ export interface DesignSpecInstance {
   createdBy: string;
   createdAt: string;
   outputs: DesignSpecOutput;
+}
+
+export interface StageConfirmation {
+  confirmed: boolean;
+  confirmedAt?: string;
+  confirmedBy?: string;
 }
 
 export interface TemplateItem {
@@ -122,6 +151,9 @@ export interface SubProject {
   enabledCategoryIds: string[];
   tasks: TaskItem[];
   operationLogs: OperationLog[];
+  processStages?: DesignStage[];
+  processRecords?: DesignProcessRecord[];
+  stageConfirmations?: Record<DesignStage, StageConfirmation>;
   designSpecs?: DesignSpecInstance[];
 }
 

@@ -25,6 +25,8 @@ const baseSubProject: SubProject = {
     },
   ],
   operationLogs: [],
+  processRecords: [],
+  designSpecs: [],
 };
 
 describe('useStageNavigation', () => {
@@ -79,8 +81,8 @@ describe('useStageNavigation', () => {
     expect(updated.stage).toBe('施工图设计');
     expect(updated.stageHistory).toContain('初步设计');
     expect(updated.tasks.some(task => task.stage === '施工图设计')).toBe(true);
-    expect(updated.operationLogs[0]?.action).toBe('advance_stage');
+    expect(updated.operationLogs[0]?.action).toBe('阶段切换');
     expect(updated.operationLogs[0]?.actor).toBe('tester');
-    expect(updated.operationLogs[0]?.detail).toBe('初步设计 -> 施工图设计');
+    expect(updated.operationLogs[0]?.detail).toBe('从 初步设计 切换到 施工图设计');
   });
 });

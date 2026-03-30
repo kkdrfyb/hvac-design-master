@@ -7,6 +7,7 @@ set "PROJECT_ROOT=%~dp0"
 set "SKIP_ENV_UPDATE=%SKIP_ENV_UPDATE%"
 set "FORCE_ENV_UPDATE=%FORCE_ENV_UPDATE%"
 set "SKIP_AUTO_OPEN=%SKIP_AUTO_OPEN%"
+set "HIDE_WINDOWS=%HIDE_WINDOWS%"
 
 echo ========================================================
 echo HVAC Design Master - bootstrap script
@@ -85,10 +86,20 @@ if exist node_modules (
 )
 
 echo [4/5] Starting backend at http://localhost:3001
-start "HVAC Backend" cmd /k ""%ENV_PREFIX%\python.exe" -m uvicorn app:app --app-dir server --host 0.0.0.0 --port 3001"
+if /I "%HIDE_WINDOWS%"=="1" (
+    echo       Hidden mode enabled, backend window will not be shown.
+    wscript.exe //nologo "%PROJECT_ROOT%start_hidden_process.vbs" "%PROJECT_ROOT%" "%ENV_PREFIX%\python.exe" -m uvicorn app:app --app-dir server --host 0.0.0.0 --port 3001
+) else (
+    start "HVAC Backend" cmd /k ""%ENV_PREFIX%\python.exe" -m uvicorn app:app --app-dir server --host 0.0.0.0 --port 3001"
+)
 
 echo [5/5] Starting frontend at http://localhost:3000
-start "HVAC Frontend" cmd /k ""%ENV_PREFIX%\npm.cmd" run dev"
+if /I "%HIDE_WINDOWS%"=="1" (
+    echo       Hidden mode enabled, frontend window will not be shown.
+    wscript.exe //nologo "%PROJECT_ROOT%start_hidden_process.vbs" "%PROJECT_ROOT%" "%ENV_PREFIX%\npm.cmd" run dev
+) else (
+    start "HVAC Frontend" cmd /k ""%ENV_PREFIX%\npm.cmd" run dev"
+)
 
 if /I "%SKIP_AUTO_OPEN%"=="1" (
     echo       Auto-open disabled by SKIP_AUTO_OPEN=1
@@ -106,6 +117,9 @@ echo If login fails, check "HVAC Backend" window first.
 echo Default test accounts: user1 / user2 / user3
 echo Default password: password123
 echo.
+if /I "%HIDE_WINDOWS%"=="1" (
+    exit /b 0
+)
 pause
 exit /b 0
 
@@ -113,5 +127,8 @@ exit /b 0
 echo.
 echo Bootstrap failed. Please fix the error and run again.
 echo.
+if /I "%HIDE_WINDOWS%"=="1" (
+    exit /b 1
+)
 pause
 exit /b 1
