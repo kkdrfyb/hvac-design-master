@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日常使用流程演示 v2 · 暖通室信息化管理平台</title>
+<style>
+:root{
+  --bg:#f4f6fa; --panel:#ffffff; --text:#1f2933; --muted:#64748b; --line:#e2e8f0;
+  --accent:#2563eb; --accent-soft:#eff6ff; --ok:#059669; --ok-soft:#ecfdf5;
+  --warn:#d97706; --warn-soft:#fffbeb; --bad:#dc2626; --bad-soft:#fef2f2;
+  --violet:#7c3aed; --violet-soft:#f5f3ff; --shadow:0 10px 30px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","Segoe UI",Arial,sans-serif;line-height:1.6}
+button,select,input{font-family:inherit}
+.topbar{height:64px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:20;gap:12px}
+.brand-title{font-size:17px;font-weight:900;letter-spacing:.2px}
+.brand-sub{font-size:11px;color:var(--muted);font-weight:700;margin-top:2px}
+.controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.btn{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:10px;padding:7px 11px;font-size:12px;font-weight:800;cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#1d4ed8;color:#fff}
+.btn.ghost{background:transparent}
+.view-btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;color:var(--muted)}
+.view-btn.on{background:var(--violet);border-color:var(--violet);color:#fff}
+.view-sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+select{border:1px solid var(--line);border-radius:10px;padding:7px 9px;font-size:12px;background:#fff;color:var(--text)}
+.layout{display:grid;grid-template-columns:252px minmax(0,1fr) 320px;gap:16px;padding:16px;height:calc(100vh - 64px);min-height:640px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:auto}
+.steps{padding:16px}
+.panel-title{font-size:12px;font-weight:900;color:var(--muted);letter-spacing:1px;margin:2px 0 12px}
+.group-label{font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:1px;margin:14px 6px 5px}
+.group-label:first-of-type{margin-top:4px}
+.step-btn{width:100%;text-align:left;border:1px solid transparent;background:transparent;border-radius:12px;padding:9px 10px;margin-bottom:3px;cursor:pointer;display:flex;gap:9px;align-items:flex-start;color:var(--text)}
+.step-btn:hover{background:#f8fafc}
+.step-btn.active{background:var(--accent-soft);border-color:#bfdbfe}
+.step-no{flex:0 0 26px;height:26px;border-radius:8px;background:#eef2f7;color:var(--muted);font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.step-btn.active .step-no{background:var(--accent);color:#fff}
+.step-name{font-size:12px;font-weight:800;line-height:1.4}
+.step-tag{font-size:10px;color:var(--muted);margin-top:3px}
+.role-dot{display:inline-block;font-size:9px;font-weight:900;border-radius:5px;padding:0 5px;margin-left:4px;vertical-align:1px}
+.role-dot.user{background:#dbeafe;color:#1d4ed8}
+.role-dot.admin{background:#ede9fe;color:#6d28d9}
+.role-dot.both{background:#e2e8f0;color:#475569}
+.maincol{display:flex;flex-direction:column;gap:12px;min-width:0}
+.progress-wrap{padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;align-items:center;gap:12px}
+.progress-track{flex:1;height:8px;border-radius:99px;background:#e8eef5;overflow:hidden}
+.progress-bar{height:100%;width:5%;background:linear-gradient(90deg,var(--accent),#60a5fa);border-radius:99px;transition:width .35s ease}
+.counter{font-size:12px;font-weight:900;color:var(--muted);white-space:nowrap}
+.stage{padding:14px;flex:1;min-height:0;display:flex;flex-direction:column}
+.mock{height:100%;min-height:540px;border:1px solid var(--line);border-radius:14px;background:#fbfcfe;display:flex;overflow:hidden}
+.mock-side{width:206px;flex:0 0 206px;background:#fff;border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column}
+.mock-brand{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:900;margin-bottom:16px}
+.mock-logo{width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
+.mock-user{font-size:10px;color:var(--muted);background:#f6f8fb;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:14px;word-break:break-all}
+.mock-nav-label{font-size:9px;color:#94a3b8;font-weight:900;letter-spacing:1px;margin:5px 8px}
+.mock-nav{display:flex;flex-direction:column;gap:2px}
+.mock-nav div{font-size:11px;padding:6px 9px;border-radius:9px;color:var(--muted);font-weight:700}
+.mock-nav div.on{background:var(--accent-soft);color:var(--accent);font-weight:900}
+.mock-body{flex:1;min-width:0;display:flex;flex-direction:column}
+.mock-head{background:#fff;border-bottom:1px solid var(--line);padding:11px 20px}
+.mock-crumb{font-size:10px;color:#94a3b8;font-weight:800}
+.mock-head h3{margin:3px 0 0;font-size:17px}
+.mock-content{padding:16px;overflow:auto;flex:1}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:11px}
+.card.tint{background:var(--accent-soft);border-color:#bfdbfe}
+.card.ok{background:var(--ok-soft);border-color:#a7f3d0}
+.card.warn{background:var(--warn-soft);border-color:#fde68a}
+.card.violet{background:var(--violet-soft);border-color:#ddd6fe}
+.card.bad{background:var(--bad-soft);border-color:#fecaca}
+.card h4{margin:0 0 7px;font-size:13px}
+.card p{margin:4px 0;font-size:11px;color:var(--muted)}
+.big{font-size:16px;font-weight:900}
+.pill{display:inline-block;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:900;margin-right:5px}
+.pill.blue{background:#dbeafe;color:#1d4ed8}
+.pill.green{background:#d1fae5;color:#047857}
+.pill.amber{background:#fef3c7;color:#b45309}
+.pill.red{background:#fee2e2;color:#b91c1c}
+.pill.violet{background:#ede9fe;color:#6d28d9}
+.pill.gray{background:#e2e8f0;color:#475569}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.flow{display:flex;align-items:stretch;gap:5px}
+.flow .card{flex:1;margin-bottom:0;min-width:0}
+.flow .arrow{align-self:center;color:#94a3b8;font-size:13px;font-weight:900;flex:0 0 auto}
+.fake-input{border:1px solid var(--line);background:#f8fafc;border-radius:9px;padding:8px 11px;font-size:11px;color:#94a3b8}
+.fake-input.dark{color:var(--text);background:#fff}
+.row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:11px}
+.row:last-child{border-bottom:0}
+.row .grow{flex:1;min-width:0}
+.file{font-weight:800;color:var(--text)}
+.meta{font-size:10px;color:var(--muted)}
+.bar{height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.arrow{text-align:center;color:#94a3b8;font-size:13px;font-weight:900;margin:2px 0}
+.rule{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:10px 12px;font-size:11px;font-family:Consolas,monospace;line-height:1.8;word-break:break-all}
+.rule b{color:#7dd3fc}
+.mini-tag{font-size:9px;font-weight:900;color:#6d28d9;background:#ede9fe;border-radius:5px;padding:1px 5px;margin-left:5px}
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:100%}
+.dual .mock{min-height:0;height:100%;flex-direction:column;border-radius:12px}
+.dual .mock-side{width:auto;flex:0 0 auto;border-right:0;border-bottom:1px solid var(--line);padding:8px 10px;display:block}
+.dual .mock-brand{margin-bottom:6px;font-size:10px}
+.dual .mock-logo{width:20px;height:20px;font-size:10px}
+.dual .mock-user{margin-bottom:6px;padding:5px 7px}
+.dual .mock-nav-label{display:none}
+.dual .mock-nav{flex-direction:row;flex-wrap:wrap;gap:3px}
+.dual .mock-nav div{font-size:9px;padding:3px 6px}
+.dual .mock-head{padding:8px 12px}
+.dual .mock-head h3{font-size:13px}
+.dual .mock-content{padding:10px;max-height:470px}
+.dual .card{padding:9px;margin-bottom:8px}
+.dual .card h4{font-size:11px}
+.dual .card p,.dual .row{font-size:10px}
+.notes{padding:18px}
+.notes .badge{display:inline-block;border-radius:99px;padding:4px 10px;font-size:10px;font-weight:900;margin-bottom:10px}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.gray{background:#f1f5f9;color:var(--muted)}
+.badge.violet{background:var(--violet-soft);color:var(--violet)}
+.notes h2{font-size:18px;margin:0 0 10px}
+.notes h5{font-size:11px;color:var(--muted);letter-spacing:1px;margin:16px 0 7px}
+.notes ul{margin:0;padding-left:18px}
+.notes li{font-size:12px;margin-bottom:7px}
+.checkbox-note{background:var(--warn-soft);border:1px solid #fde68a;border-radius:12px;padding:12px;font-size:11px;color:#92400e;margin-top:14px}
+.legend{font-size:11px;color:var(--muted);padding:0 4px}
+.legend b{color:var(--text)}
+.mismatch{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 16px 16px;box-shadow:var(--shadow)}
+.mismatch h3{margin:0 0 10px;font-size:14px}
+.mismatch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mismatch-grid div{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px;border-radius:0 10px 10px 0;font-size:11px}
+.mismatch-grid b{display:block;margin-bottom:4px}
+.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;opacity:0;pointer-events:none;transition:.2s;z-index:50}
+.toast.show{opacity:1}
+@media(max-width:1250px){
+  .topbar{height:auto;flex-wrap:wrap;padding:10px 16px}
+  .controls{justify-content:flex-start}
+  .layout{height:auto;grid-template-columns:220px minmax(0,1fr)}
+  .notes{grid-column:1/-1}
+}
+@media(max-width:900px){
+  .dual{grid-template-columns:1fr}
+  .mismatch-grid{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+  .layout{display:block;padding:10px}
+  .panel{margin-bottom:10px}
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <div class="brand-title">日常使用流程演示 · v2</div>
+    <div class="brand-sub">暖通室信息化管理平台 ｜ 管理员 / 设计人员界面分别展示 ｜ 三条使用路径 + 域账号口径</div>
+  </div>
+  <div class="controls">
+    <button class="view-btn on" data-v="all">全部流程</button>
+    <button class="view-btn" data-v="user">设计人员界面</button>
+    <button class="view-btn" data-v="admin">管理员界面</button>
+    <span class="view-sep"></span>
+    <button class="btn primary" id="autoBtn">自动演示</button>
+    <button class="btn" id="prevBtn">上一步</button>
+    <button class="btn" id="nextBtn">下一步</button>
+    <button class="btn ghost" id="resetBtn">重新开始</button>
+    <select id="speed" aria-label="播放速度">
+      <option value="5600">慢速</option>
+      <option value="4200" selected>中速</option>
+      <option value="2800">快速</option>
+    </select>
+    <button class="btn" id="copyBtn">一键复制全文</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="panel steps">
+    <div class="panel-title">流程步骤（点击可跳转）</div>
+    <div id="stepList"></div>
+  </aside>
+
+  <div class="maincol">
+    <div class="progress-wrap">
+      <div class="counter" id="counter">步骤 1 / 1</div>
+      <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="legend" id="legend">当前视角：<b>全部流程</b></div>
+    </div>
+    <section class="panel stage"><div class="mock" id="mock"></div></section>
+  </div>
+
+  <aside class="panel notes">
+    <div id="stepBadge"></div>
+    <h2 id="stepTitle"></h2>
+    <h5>我理解的关键动作</h5>
+    <ul id="stepKey"></ul>
+    <h5>为什么这样做</h5>
+    <div id="stepWhy" style="font-size:12px"></div>
+    <h5>对应需求 / 当前程序状态</h5>
+    <div id="stepMap" style="font-size:12px"></div>
+    <div class="checkbox-note" id="stepCheck"></div>
+  </aside>
+</div>
+
+<section class="mismatch">
+  <h3>请重点核对：V2 新增的五处口径</h3>
+  <div class="mismatch-grid">
+    <div><b>域账号即用户名，不注册</b>用户名用域账号（如 hvac\fanyb），密码用域登录密码；管理员只收集名单与授予权限，不另发密码。</div>
+    <div><b>命名规则识别的是“分支”</b>按文件名识别项目 / 子项 / 阶段 / 类别 / 细项 / 系统或设备，识别后仍需人工确认，不静默归类和上传。</div>
+    <div><b>从零开始与中途接手是两条路径</b>前者按设计推进逐步上传；后者先把历史资料批量扫进来，再逐步补齐缺项。</div>
+    <div><b>删错资料要留原因</b>删除旧的错误资料应保留操作人与原因；当前程序只有删除文件记录，没有独立“原因留痕”入口。</div>
+    <div><b>升版保留旧版，对比有边界</b>新版本成为当前版本、旧版仍可查可下载；本期先做版本清单与变更说明对比，图形自动差异比对是更深需求。</div>
+    <div><b>界面权限不同</b>设计人员看不到账户与权限配置；管理员能做名单导入和授权，但正式审批、出版仍不在本平台。</div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const userNav = ['平台能力','项目总览','设计过程','规范校审','标准化设计','本机资料导入','常见问题'];
+const adminNav = ['平台能力','项目总览','设计过程','规范校审','标准化设计','本机资料导入','账户与权限','审计与统计'];
+
+function shell(role, active, title, content){
+  const nav = (role==='admin'?adminNav:userNav);
+  const navHtml = nav.map(n=>`<div class="${n===active?'on':''}">${n}</div>`).join('');
+  const who = role==='admin' ? '域账号：hvac\\admin ｜ 管理员' : '域账号：hvac\\fanyb ｜ 设计人员';
+  return `<div class="mock-side">
+      <div class="mock-brand"><span class="mock-logo">H</span><span>暖通室信息化管理平台</span></div>
+      <div class="mock-user">${who}<br>当前子项可编辑</div>
+      <div class="mock-nav-label">项目导航</div>
+      <div class="mock-nav"><div>徐大堡项目 / 化学实验室</div></div>
+      <div class="mock-nav-label">功能菜单</div>
+      <div class="mock-nav">${navHtml}</div>
+    </div>
+    <div class="mock-body">
+      <div class="mock-head"><div class="mock-crumb">徐大堡项目 / 化学实验室</div><h3>${title}</h3></div>
+      <div class="mock-content">${content}</div>
+    </div>`;
+}
+
+const steps = [
+  {
+    id:'screens', path:'一、界面与账号', role:'both', tag:'管理员 / 设计人员分别展示', title:'同一平台，两套界面：管理员看授权，设计人员看项目',
+    key:['设计人员界面只有与项目协作有关的菜单：平台能力、项目总览、设计过程、规范校审、标准化设计、本机资料导入、常见问题。','管理员界面额外有“账户与权限”“审计与统计”，用于维护域账号名单和授权范围。','两套界面看到的项目内容按权限隔离，只读账号不能上传、修改或删除。'],
+    why:'用户在一个域里，账号由域统一管理；平台不该让普通设计人员接触授权配置，也不该让管理员把授权当成日常填报负担。',
+    map:'需求 6 / 8；程序状态：当前已有账户管理与权限字段，但管理员/设计人员菜单差异需按本口径调整。',
+    check:'请核对：管理员是否需要“审计与统计”入口？如果不需要，可以并回账户管理一页。',
+    badge:'部分实现', badgeClass:'warn',
+    scene:`<div class="dual">
+      ${shell('admin','账户与权限','管理员界面',`
+        <div class="card violet"><h4>管理员可见<span class="mini-tag">仅管理员</span></h4><p>账户与权限：域账号名单、项目/子项可编辑授权。</p><p>审计与统计：上传、删除、校审流转记录。</p></div>
+        <div class="card"><h4>正常项目操作</h4><p>同样可以进入总览、过程、校审、资料导入。</p></div>`)}
+      ${shell('user','项目总览','设计人员界面',`
+        <div class="card tint"><h4>设计人员可见</h4><p>围绕项目：总览、过程、校审、标准化设计、本机资料导入。</p></div>
+        <div class="card"><h4>看不到</h4><p>账户名单、密码设置、权限授予入口。</p></div>`)}
+    </div>`
+  },
+  {
+    id:'login', path:'一、界面与账号', role:'both', tag:'不注册：域账号直接登录', title:'用域账号和域密码登录，平台不再提供注册',
+    key:['用户名就是域账号，密码就是域登录密码；第一次登录由管理员预置的名单放行，不需要在本平台再注册一遍。','登录页去掉“注册”入口；新同事由管理员把域账号加入名单并授权后即可登录。','离职或调岗人员由管理员停用账号，不改动其域账号本身。'],
+    why:'都在同一个域里，再维护一套用户名密码只会增加遗忘、重置和重复管理工作；域账号本身就是身份来源。',
+    map:'需求变更（本轮新增）；程序状态：当前仍是自建账号 + 注册接口 + Excel 批量导入密码，此条待改造。',
+    check:'请核对：是“域账号即用户名、域密码即密码”，还是只自动带出域账号、密码由平台另发？我按前者理解。',
+    badge:'需求变更', badgeClass:'violet',
+    scene: shell('user','平台能力','登录',`
+      <div class="grid2">
+        <div class="card tint"><h4>登录（无注册入口）</h4><div class="fake-input" style="margin-bottom:8px">域账号：hvac\\fanyb</div><div class="fake-input" style="margin-bottom:8px">域密码：••••••••</div><div class="fake-input dark" style="text-align:center;font-weight:900;color:var(--accent)">登 录</div><p style="margin-top:8px">名单内账号直接进；名单外账号提示“请联系管理员”。</p></div>
+        <div class="card warn"><h4>与现行程序的差别</h4><p>现行：平台自建账号、可注册、管理员用 Excel 导入并写入密码。</p><p>改为：域账号名 + 域密码，平台只保存账号与权限，不保存另设密码。</p></div>
+      </div>
+      <div class="card"><h4>管理员预置名单</h4><p>收集部门域账号 → 设定可编辑的项目/子项 → 保存。无需逐人告知初始密码。</p></div>`)
+  },
+  {
+    id:'grant', path:'一、界面与账号', role:'admin', tag:'管理员：名单与授权', title:'管理员只做两件事：收集域账号、给这些人修改权限',
+    key:['维护部门域账号名单（可批量导入名单表），不收集、不保存域密码。','给名单中的人指定可编辑的项目/子项；未授权的项目自动只读或不可见。','授权变更自动留痕：谁在什么时候给谁开了哪个项目的编辑权。'],
+    why:'身份交给域，权限留在平台：管理员的工作从“发账号、改密码”简化成“维护名单、勾授权范围”。',
+    map:'需求变更 + 需求 6；程序状态：账户管理与项目/子项权限已有基础，域账号名单导入与自动放行待改造。',
+    check:'请核对：授权粒度是“按项目”还是“按项目 + 子项”？现在程序支持到子项，我按子项演示。',
+    badge:'部分实现', badgeClass:'warn',
+    scene: shell('admin','账户与权限','账户与权限（域账号名单）',`
+      <div class="card tint"><div class="big">域账号名单 → 勾选可编辑范围 → 保存</div><p>平台不设置密码；密码在域里统一管理和修改。</p></div>
+      <div class="card"><h4>部门域账号</h4>
+        <div class="row"><span class="grow"><span class="file">hvac\\fanyb</span><div class="meta">范工 · 设计人员</div></span><span class="pill green">徐大堡/化学实验室 可编辑</span></div>
+        <div class="row"><span class="grow"><span class="file">hvac\\li</span><div class="meta">李工 · 设计人员</div></span><span class="pill blue">徐大堡 只读</span></div>
+        <div class="row"><span class="grow"><span class="file">hvac\\wang</span><div class="meta">王工 · 校审人</div></span><span class="pill violet">全部项目 可校审</span></div>
+      </div>
+      <div class="grid2"><div class="card ok"><h4>批量导入名单</h4><p>按域账号列导入，已存在只更新授权范围。</p></div><div class="card warn"><h4>不用做的事</h4><p>不生成初始密码、不要求首次登录改密。</p></div></div>`)
+  },
+
+  {
+    id:'newProject', path:'二、路径A：从零开始', role:'user', tag:'从设计开始 · 建项目', title:'路径A 起点：新建项目，套用适用模板',
+    key:['选择项目类型后套用对应模板，模板带出阶段、分类、细项和检查要点。','只启用本项目适用的条目，不把所有模板内容一次性塞进项目。','确认当前阶段；阶段完成由授权负责人确认，不按文件数量自动判定。'],
+    why:'从零开始时，先有统一骨架，后面上传的文件才有归位的地方；新成员也能按模板快速熟悉设计内容。',
+    map:'需求 1.1 / 5.5；程序状态：模板与项目创建已有基础，模板快照与适用性配置待完善。',
+    check:'请核对：项目类型由谁定？现在按“模板选择”处理，是否需要管理员统一配置模板？',
+    badge:'基础能力', badgeClass:'warn',
+    scene: shell('user','标准化设计','新建项目 · 套用模板',`
+      <div class="grid2"><div class="card"><h4>01 项目基本信息</h4><div class="fake-input" style="margin-bottom:7px">项目名称：徐大堡项目</div><div class="fake-input" style="margin-bottom:7px">子项：化学实验室</div><div class="fake-input">项目类型：实验室通风</div></div>
+      <div class="card tint"><h4>02 套用模板</h4><p><span class="pill blue">阶段</span>方案 / 初设 / 施工图</p><p><span class="pill green">分类</span>设计输入 / 计算结果 / 输出成果 / 设备资料</p><p><span class="pill violet">细项</span>只保留本项目适用的 12 项</p></div></div>
+      <div class="card ok"><b>模板作用：</b>后面按文件名识别分支、按阶段上传时，都对照这套分类与细项，不再每次临时起名。</div>`)
+  },
+  {
+    id:'stepUpload', path:'二、路径A：从零开始', role:'user', tag:'从设计开始 · 逐步上传', title:'随设计推进逐步上传：输入 → 计算 → 成果',
+    key:['先传设计输入（任务书、条件图），再传计算结果（负荷计算书、选型表），最后传输出成果（图纸、说明）。','每一步都在当前项目/子项下操作，阶段和类别由当前设计阶段带入，不用重复选择。','系统按操作自动留痕；只在有重要决定或跨专业待办时补一句说明。'],
+    why:'从零开始的项目，资料是随着设计自然产生的；按产生顺序上传，目录结构就是设计过程本身。',
+    map:'需求 5.2 / 5.4；程序状态：本机目录上传与自动留痕已实现。',
+    check:'请核对：这三步是否还需要细分成“每次上传都要确认阶段”？现在是按当前阶段自动带入。',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('user','本机资料导入','设计过程 · 逐步上传',`
+      <div class="flow">
+        <div class="card tint"><h4>1 设计输入</h4><p>任务书、原始条件图</p><p><span class="pill green">已传 3 份</span></p></div><div class="arrow">→</div>
+        <div class="card"><h4>2 计算结果</h4><p>负荷计算、设备选型表</p><p><span class="pill blue">已传 4 份</span></p></div><div class="arrow">→</div>
+        <div class="card ok"><h4>3 输出成果</h4><p>施工图、设计说明</p><p><span class="pill gray">待上传</span></p></div>
+      </div>
+      <div class="card" style="margin-top:12px"><h4>上传时自动带入</h4><div class="row"><span class="grow">目标子项</span><span>化学实验室</span></div><div class="row"><span class="grow">当前阶段</span><span class="pill blue">施工图设计</span></div><div class="row"><span class="grow">类别</span><span>由当前步骤带入，可改</span></div></div>
+      <div class="card tint"><b>留痕：</b>每次上传自动记录操作人、时间与文件，不需要另写工作日志。</div>`)
+  },
+  {
+    id:'reviewA', path:'二、路径A：从零开始', role:'user', tag:'从设计开始 · 校审', title:'成果出来后发起校审：意见 → 整改 → 复核 → 关闭',
+    key:['可发起自校、互校、专业校审，写清意见、规范引用和整改责任人。','设计人员回复整改，校审人通过或退回；退回要说明原因。','关闭后保留完整流转记录；正式审批与出版仍在公司系统。'],
+    why:'校审闭环是题目要求的三项核心能力之一，记录的是项目内部质量过程，不替代正式审批。',
+    map:'需求 1.1 / 5.6；程序状态：本轮新增校审记录与流转，标记“试用中”。',
+    check:'请核对：退回整改是否必须填原因？我按“必须填”演示，便于以后追溯。',
+    badge:'试用中', badgeClass:'warn',
+    scene: shell('user','规范校审','规范校审 · 流转闭环',`
+      <div class="card"><h4>校审对象：通风布置图_B版</h4><div class="row"><span class="grow">类型</span><span class="pill blue">互校</span></div><div class="row"><span class="grow">意见</span><span>风管穿墙处缺少防火阀标注</span></div><div class="row"><span class="grow">规范引用</span><span class="meta">名称 / 编号 / 条款 / 链接</span></div></div>
+      <div class="flow">
+        <div class="card tint"><h4>1 发起</h4><p>校审人填意见与责任人</p></div><div class="arrow">→</div>
+        <div class="card"><h4>2 整改</h4><p>设计人员回复</p></div><div class="arrow">→</div>
+        <div class="card warn"><h4>3 复核</h4><p>通过或退回（需原因）</p></div><div class="arrow">→</div>
+        <div class="card ok"><h4>4 关闭</h4><p>保留完整记录</p></div>
+      </div>`)
+  },
+
+  {
+    id:'scan', path:'三、路径B：中途批量接手', role:'user', tag:'中途接手 · 扫描本机', title:'路径B 起点：从中间接手，先扫描本机文件夹',
+    key:['项目已做到一半、历史资料在本机文件夹里时，先在本机选择文件夹，浏览相对层级。','只做预览，不立即上传；把分散的文件先纳入视野，再决定哪些要进平台。','不需要先把资料拷到服务器共享目录。'],
+    why:'中途接手的人手里往往是一个完整的项目文件夹；先扫描再筛选，比逐个找文件更符合实际。',
+    map:'需求 5.2；程序状态：本机目录选择与相对路径预览已实现。',
+    check:'请核对：扫描时要不要自动排除临时文件（如 ~$ 开头、备份目录）？现在还没有白名单/黑名单。',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('user','本机资料导入','本机资料导入 · 扫描预览',`
+      <div class="grid2"><div class="card"><h4>01 选择本机目录</h4><div class="fake-input">D:\\项目资料\\徐大堡\\化学实验室\\</div><p style="margin-top:8px">预览（相对层级）：</p><div class="meta">├ 设计输入\\（3 个文件）</div><div class="meta">├ 计算书\\（4 个文件）</div><div class="meta">├ 施工图\\（11 个文件）</div><div class="meta">└ 设备资料\\（6 个文件）</div></div>
+      <div class="card warn"><h4>02 先预览、后上传</h4><p>共 24 个文件，大小 186 MB；可勾选、可排除。</p><p>排除示例：~$临时文件、旧备份目录、个人草稿。</p></div></div>
+      <div class="card tint"><b>注意：</b>这里是浏览器读取用户本机目录，不是服务器目录扫描。</div>`)
+  },
+  {
+    id:'naming', path:'三、路径B：中途批量接手', role:'user', tag:'中途接手 · 命名识别', title:'按命名规则识别每个资料所属的分支，再人工确认',
+    key:['约定命名格式：项目代号-子项-阶段-类别-细项或系统-版本，系统按分隔符拆出各段。','识别结果映射到平台现有分支（阶段 / 类别 / 细项 / 系统或设备），逐条显示识别依据与置信度。','识别不准的条目由人工改选；未确认前不上传，不静默归类。'],
+    why:'批量导入最怕“传进去找不到”；先用命名规则给出建议分支、再由人确认，才能既快又不乱。',
+    map:'需求 5.2 / 5.5；程序状态：当前按目录名归类到 7 类，按文件名识别分支与确认界面待实施。',
+    check:'请核对：命名分隔符和字段顺序按下面这套是否可行？你们现有文件名的实际写法我需要几条样例。',
+    badge:'需求目标', badgeClass:'warn',
+    scene: shell('user','本机资料导入','命名规则 · 分支识别',`
+      <div class="rule"><b>命名规则：</b>项目代号 - 子项 - 阶段 - 类别 - 系统或设备 - 版本.扩展名<br>
+      例：XDB - HJS - 施工图 - 输出成果 - 送风系统 - B版.dwg</div>
+      <div class="card" style="margin-top:11px"><h4>识别预览（未确认，不上传）</h4>
+        <div class="row"><span class="grow"><span class="file">XDB-HJS-施工图-输出成果-送风系统-B版.dwg</span><div class="meta">阶段：施工图 ｜ 类别：输出成果 ｜ 系统：送风系统</div></span><span class="pill green">高置信</span></div>
+        <div class="row"><span class="grow"><span class="file">XDB-HJS-初设-计算结果-负荷计算-A版.xlsx</span><div class="meta">阶段：初设 ｜ 类别：计算结果 ｜ 细项：负荷计算</div></span><span class="pill green">高置信</span></div>
+        <div class="row"><span class="grow"><span class="file">设备表_最终版_修改2.xlsx</span><div class="meta">不符合命名规则</div></span><span class="pill red">需人工指定</span></div>
+      </div>
+      <div class="card warn"><b>规则只是建议：</b>识别结果可逐条改选；不规范文件名不阻断导入，但必须人工指定分支后才能继续。</div>`)
+  },
+  {
+    id:'batch', path:'三、路径B：中途批量接手', role:'user', tag:'中途接手 · 查重与批量上传', title:'确认分支后查重，再按分支分组批量上传',
+    key:['上传前先查重：同名同版本已存在的，提示“跳过 / 作为新版本 / 覆盖（受权限控制）”。','按识别出的分支分组上传，逐组显示进度；一组失败不影响其他组。','上传完成后在项目树/列表里能看到这些文件，并自动留下导入记录。'],
+    why:'查重放在上传前，避免历史资料一次性灌进来形成重复版本；分组上传则让失败可定位、可重试。',
+    map:'需求 5.2 / 5.7；程序状态：分组上传与失败隔离已实现；上传前查重与命名识别待实施。',
+    check:'请核对：重复文件你希望默认“跳过”还是“作为新版本保留”？我按“先提示、不默认覆盖”演示。',
+    badge:'部分实现', badgeClass:'warn',
+    scene: shell('user','本机资料导入','分支确认 · 批量上传',`
+      <div class="grid2"><div class="card"><h4>归类结果</h4><div class="row"><span class="grow">施工图 / 输出成果 / 送风系统</span><span class="pill blue">6 份</span></div><div class="row"><span class="grow">初设 / 计算结果 / 负荷计算</span><span class="pill blue">4 份</span></div><div class="row"><span class="grow">设备资料 / 设备表</span><span class="pill amber">1 份待指定</span></div></div>
+      <div class="card warn"><h4>查重提示</h4><p>发现 2 份同名同版本已存在。</p><p><span class="pill gray">跳过</span><span class="pill blue">作为新版本</span><span class="pill red">覆盖（需权限）</span></p><p class="meta">默认不覆盖，由操作人选择。</p></div></div>
+      <div class="card"><h4>上传进度（按组隔离）</h4><div class="row"><span class="grow">输出成果（6 份）</span><span class="pill green">完成</span></div><div class="bar"><i style="width:100%"></i></div><div class="row"><span class="grow">计算结果（4 份）</span><span class="pill blue">上传中 3/4</span></div><div class="bar"><i style="width:75%"></i></div><div class="row"><span class="grow">设备资料（待指定）</span><span class="pill gray">未开始</span></div></div>`)
+  },
+
+  {
+    id:'replace', path:'四、路径C：后期替换与升版', role:'user', tag:'后期维护 · 新资料替换', title:'后期有了新资料：替换到原位置，不另起一套目录',
+    key:['先在原分支下找到旧资料，再上传新资料；新资料沿用同一分支与命名规则。','替换后当前版本指向新文件，旧版不立即消失（见下一步升版）。','替换原因可填一句说明，例如“按校审意见补充防火阀标注”。'],
+    why:'如果每次修改都新建一个目录，历史就散了；在原位置替换，才能看清一个资料的演变。',
+    map:'需求 5.2 / 5.8；程序状态：可重新上传并保存项目数据；替换原因字段与提示待补。',
+    check:'请核对：替换时是否必须填原因？我按“选填，但校审相关的替换建议填”演示。',
+    badge:'部分实现', badgeClass:'warn',
+    scene: shell('user','项目总览','资料维护 · 替换',`
+      <div class="card tint"><div class="big">原分支：施工图 / 输出成果 / 送风系统</div><p>操作：选中旧文件 → 上传新文件 → 填写原因（选填）→ 保存。</p></div>
+      <div class="card"><h4>替换前 / 替换后</h4>
+        <div class="row"><span class="grow"><span class="file">通风布置图_A版.dwg</span><div class="meta">原当前版本 · 2026-11-10 · 张工</div></span><span class="pill gray">将转为历史版本</span></div>
+        <div class="row"><span class="grow"><span class="file">通风布置图_B版.dwg</span><div class="meta">新当前版本 · 2026-11-17 · 李工</div></span><span class="pill green">当前</span></div>
+      </div>
+      <div class="card warn"><b>原因示例：</b>按校审意见补充防火阀标注，并同步修改送风系统图例。</div>`)
+  },
+  {
+    id:'delete', path:'四、路径C：后期替换与升版', role:'user', tag:'后期维护 · 删除错误资料', title:'删除旧的错误资料：留操作人、时间和原因',
+    key:['只有对该子项有修改权限的人能删；只读账号的删除操作被拦截。','删除前显示影响：是否被过程记录、校审意见或版本链引用。','删除时填写原因，删除后在动态/审计里仍可查到“谁删了什么、为什么”。'],
+    why:'“删掉就没了”是资料管理的风险点；留原因和引用检查，才能既清理错误又不丢线索。',
+    map:'需求 5.8 / 6；程序状态：删除文件记录已有基础，独立的删除原因留痕与引用检查待实施。',
+    check:'请核对：删除是“彻底移除”还是“移到回收站保留一段时间”？我按前者演示，但建议加回收站。',
+    badge:'部分实现', badgeClass:'warn',
+    scene: shell('user','设计过程','资料维护 · 删除',`
+      <div class="card bad"><h4>删除确认：通风布置图_草稿.dwg</h4><p>分支：施工图 / 输出成果 / 送风系统</p><p><span class="pill amber">被 1 条校审意见引用</span></p></div>
+      <div class="card"><h4>删除原因（必填）</h4><div class="fake-input">例如：误传的早期草稿，正式版本已用 B 版替代。</div><p style="margin-top:7px">操作人：hvac\\fanyb ｜ 时间：系统自动记录</p></div>
+      <div class="grid2"><div class="card ok"><h4>删除后</h4><p>原分支不再显示该文件；动态里保留删除记录。</p></div><div class="card warn"><h4>引用处理</h4><p>校审意见中的引用保留为文字说明，不指向已删文件。</p></div></div>`)
+  },
+  {
+    id:'version', path:'四、路径C：后期替换与升版', role:'user', tag:'后期维护 · 升版保留旧版', title:'升版不覆盖历史：旧版仍可查、可下载',
+    key:['新上传的文件成为当前版本，旧版自动进入历史版本列表，不被删除。','每个版本保留上传人、时间、来源和简要变更说明。','需要时可将历史版本下载出来，或指定某一旧版作为对照版本。'],
+    why:'“升版的内容可以保留旧版”是本次明确的口径；历史版本是追溯与交接依据，不能被新版本挤掉。',
+    map:'需求 5.2 / 5.8；程序状态：过程记录已有版本层级；文件级“当前/历史”标记与保留策略待统一。',
+    check:'请核对：历史版本是否需要设定保留期（例如始终保留）？我按“始终保留”演示。',
+    badge:'部分实现', badgeClass:'warn',
+    scene: shell('user','项目总览','版本列表 · 通风布置图',`
+      <div class="card"><h4>当前版本</h4><div class="row"><span class="grow"><span class="file">通风布置图_B版.dwg</span><div class="meta">2026-11-17 · hvac\\fanyb · 按校审意见补充防火阀</div></span><span class="pill green">当前</span></div></div>
+      <div class="card"><h4>历史版本（保留）</h4><div class="row"><span class="grow"><span class="file">通风布置图_A版.dwg</span><div class="meta">2026-11-10 · hvac\\zhang · 首次出图</div></span><span class="pill blue">可下载 / 设为对照</span></div><div class="row"><span class="grow"><span class="file">通风布置图_初稿.dwg</span><div class="meta">2026-10-28 · hvac\\zhang · 早期草稿</div></span><span class="pill gray">可下载</span></div></div>
+      <div class="card tint"><b>口径：</b>新版本不删除旧版本；旧版不参与日常下载推荐，但随时可查。</div>`)
+  },
+  {
+    id:'compare', path:'四、路径C：后期替换与升版', role:'user', tag:'后期维护 · 内容变化对比', title:'对比内容变化：先做版本清单与变更说明对比',
+    key:['选择“当前版本”和一个历史版本，系统列出两版的字段变化与文件差异摘要。','变更说明来自上传时填写的原因、校审意见和人工补充，不要求自动读懂图纸。','对比结果作为交接和复核依据；图形层面的自动差异比对属于更深需求，本期不承诺。'],
+    why:'“对比内容变化情况”在最轻量层面就是版本 + 变更说明 + 文件差异清单；先做到这一步，再谈图形自动比对。',
+    map:'需求 5.8；程序状态：版本对比视图待实施；演示为拟实现口径，不是现有功能。',
+    check:'请核对：你要的“对比”是看版本清单与变更说明，还是要系统自动标出图纸里改了哪几处？后者工作量完全不同。',
+    badge:'待实施', badgeClass:'warn',
+    scene: shell('user','设计过程','版本对比 · B版 vs A版',`
+      <div class="grid2"><div class="card"><h4>A版（历史）</h4><p>送风口：3 处</p><p>主管管径：500×250</p><p>防火阀标注：无</p></div>
+      <div class="card ok"><h4>B版（当前）</h4><p>送风口：4 处</p><p>主管管径：630×250</p><p>防火阀标注：已补充</p></div></div>
+      <div class="card tint"><h4>变化清单（按变更说明与校审意见汇总）</h4>
+        <div class="row"><span class="grow">新增：送风口 1 处（房间 3F-02）</span><span class="pill green">新增</span></div>
+        <div class="row"><span class="grow">修改：主管管径 500×250 → 630×250</span><span class="pill blue">修改</span></div>
+        <div class="row"><span class="grow">补充：风管穿墙防火阀标注</span><span class="pill amber">校审整改</span></div>
+      </div>
+      <div class="card warn"><b>边界：</b>以上变化来自人工填写的变更说明与校审记录；系统暂不自动解析图纸图形差异。</div>`)
+  },
+
+  {
+    id:'overview', path:'五、日常与交接', role:'both', tag:'日常总览：动态与待办', title:'日常进入平台：先看项目快照和最近变化',
+    key:['总览显示当前阶段、执行重点、未关闭校审数与最近变化。','关键操作自动留痕；只有重要决定、跨专业待办、异常或交接才补一句说明。','新成员从这里就能看懂项目现在在哪里，不靠口头交接。'],
+    why:'需求 5.7 / 5.8 要求以项目为入口动态展示进展、重点事项和变化，减少重复询问。',
+    map:'需求 5.7 / 5.8；程序状态：项目总览、平台能力页、自动留痕已实现。',
+    check:'请核对：你每天打开平台第一眼想看“待办清单”还是“最近变化”？现在以最近变化为主。',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('user','平台能力','项目快照与最近动态',`
+      <div class="grid3"><div class="card tint"><h4>当前阶段</h4><p class="big">施工图设计</p></div><div class="card"><h4>未关闭校审</h4><p class="big">2 条</p></div><div class="card"><h4>执行重点</h4><p class="big">3 项</p></div></div>
+      <div class="card"><h4>最近动态（自动留痕）</h4><div class="row"><span class="grow">上传 通风布置图_B版.dwg</span><span class="meta">10:24</span></div><div class="row"><span class="grow">删除 误传草稿（附原因）</span><span class="meta">09:58</span></div><div class="row"><span class="grow">校审退回整改</span><span class="meta">09:50</span></div><div class="row"><span class="grow">阶段确认：施工图设计</span><span class="meta">昨天</span></div></div>`)
+  },
+  {
+    id:'handover', path:'五、日常与交接', role:'both', tag:'接手与交付：下载导出', title:'同事接手或对外交付时，按权限检索、下载、导出',
+    key:['单文件下载、按阶段打包、整个项目导出（带清单）。','导出保留分支结构和版本信息，标明资料来源。','导出范围服从权限；目录里不同的人看到的范围可以不同。'],
+    why:'汇总设计文件是三项核心能力之一，最终要落到“找得到、下得来、说得清版本”。',
+    map:'需求 5.2 / 5.7；程序状态：项目/阶段导出已实现，跨项目检索与导出清单待完善。',
+    check:'请核对：导出时更需要保留目录结构的压缩包，还是带来源与版本的清单表格？',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('user','项目总览','检索 · 下载 · 导出',`
+      <div class="card"><h4>筛选结果（施工图 / 输出成果）</h4><div class="row"><span class="grow"><span class="file">通风布置图_B版.dwg</span><div class="meta">当前版本 · 2.4 MB</div></span><span class="pill green">下载</span></div><div class="row"><span class="grow"><span class="file">通风布置图_A版.dwg</span><div class="meta">历史版本 · 2.1 MB</div></span><span class="pill blue">下载</span></div></div>
+      <div class="grid3"><div class="card ok"><h4>单文件下载</h4><p>按文件直接下载</p></div><div class="card tint"><h4>按阶段导出</h4><p>施工图 ZIP</p></div><div class="card violet"><h4>整项目导出</h4><p>含分支与版本清单</p></div></div>
+      <div class="card warn"><b>边界：</b>正式资料效力仍以公司系统为准；平台导出的是授权范围内的副本或索引。</div>`)
+  }
+];
+
+const allList = steps.map((s,i)=>({s,i}));
+let viewMode='all', list=allList, index=0, timer=null;
+
+function rebuild(){
+  list = viewMode==='all' ? allList : allList.filter(({s})=>s.role===viewMode || s.role==='both');
+  if(index>=list.length) index=0;
+  render();
+}
+function render(){
+  if(!list.length) return;
+  const {s,i}=list[index];
+  let html='', lastPath='';
+  list.forEach((item,pos)=>{
+    if(item.s.path!==lastPath){ lastPath=item.s.path; html+=`<div class="group-label">${lastPath}</div>`; }
+    const roleTxt = item.s.role==='admin'?'管理员':item.s.role==='user'?'设计人员':'通用';
+    html+=`<button class="step-btn ${pos===index?'active':''}" data-i="${pos}">
+      <span class="step-no">${String(pos+1).padStart(2,'0')}</span>
+      <span><span class="step-name">${item.s.title}<span class="role-dot ${item.s.role}">${roleTxt}</span></span><div class="step-tag">${item.s.tag}</div></span>
+    </button>`;
+  });
+  document.getElementById('stepList').innerHTML=html;
+  document.querySelectorAll('.step-btn').forEach(btn=>btn.addEventListener('click',()=>{pause();go(Number(btn.dataset.i));}));
+  document.getElementById('mock').innerHTML=s.scene;
+  document.getElementById('counter').textContent=`步骤 ${index+1} / ${list.length}`;
+  document.getElementById('progressBar').style.width=((index+1)/list.length*100)+'%';
+  document.getElementById('legend').innerHTML=`当前视角：<b>${viewMode==='all'?'全部流程':viewMode==='user'?'设计人员':'管理员'}</b> ｜ ${s.path}`;
+  document.getElementById('stepBadge').innerHTML=`<span class="badge ${s.badgeClass}">${s.badge}</span>`;
+  document.getElementById('stepTitle').textContent=s.title;
+  document.getElementById('stepKey').innerHTML=s.key.map(k=>`<li>${k}</li>`).join('');
+  document.getElementById('stepWhy').textContent=s.why;
+  document.getElementById('stepMap').textContent=s.map;
+  document.getElementById('stepCheck').innerHTML=`<b>请核对：</b>${s.check}`;
+}
+function go(i){ index=Math.max(0,Math.min(list.length-1,i)); render(); }
+function pause(){ if(timer){clearInterval(timer);timer=null;const b=document.getElementById('autoBtn');b.textContent='自动演示';b.classList.add('primary');} }
+function play(){
+  if(timer) return;
+  const b=document.getElementById('autoBtn');b.textContent='暂停';b.classList.remove('primary');
+  const interval=Number(document.getElementById('speed').value);
+  timer=setInterval(()=>{ if(index>=list.length-1){pause();return;} go(index+1); },interval);
+}
+document.getElementById('autoBtn').addEventListener('click',()=>{timer?pause():play();});
+document.getElementById('prevBtn').addEventListener('click',()=>{pause();go(index-1);});
+document.getElementById('nextBtn').addEventListener('click',()=>{pause();go(index+1);});
+document.getElementById('resetBtn').addEventListener('click',()=>{pause();go(0);});
+document.getElementById('speed').addEventListener('change',()=>{if(timer){pause();play();}});
+document.querySelectorAll('.view-btn').forEach(b=>b.addEventListener('click',()=>{
+  pause();
+  viewMode=b.dataset.v;
+  document.querySelectorAll('.view-btn').forEach(x=>x.classList.toggle('on',x===b));
+  index=0; rebuild();
+}));
+function toast(text){const el=document.getElementById('toast');el.textContent=text;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800);}
+document.getElementById('copyBtn').addEventListener('click',async()=>{
+  const viewName=viewMode==='all'?'全部流程':viewMode==='user'?'设计人员界面':'管理员界面';
+  const text=`暖通室信息化管理平台 · 日常使用流程演示 v2（${viewName}）\n\n`+list.map((item,pos)=>{
+    const s=item.s;
+    return `${String(pos+1).padStart(2,'0')}. [${s.path}] ${s.title}\n关键动作：${s.key.join('；')}\n原因：${s.why}\n需求/状态：${s.map}\n请核对：${s.check}`;
+  }).join('\n\n');
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);}
+    else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+    toast('已复制当前视角的完整流程说明');
+  }catch(e){toast('复制失败，请手动选择文本');}
+});
+rebuild();
+</script>
+</body>
+</html>

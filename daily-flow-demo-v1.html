@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日常使用流程演示 v1 · 暖通室信息化管理平台</title>
+<style>
+:root{
+  --bg:#f4f6fa; --panel:#ffffff; --text:#1f2933; --muted:#64748b; --line:#e2e8f0;
+  --accent:#2563eb; --accent-soft:#eff6ff; --ok:#059669; --ok-soft:#ecfdf5;
+  --warn:#d97706; --warn-soft:#fffbeb; --bad:#dc2626; --bad-soft:#fef2f2;
+  --violet:#7c3aed; --violet-soft:#f5f3ff; --shadow:0 10px 30px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","Segoe UI",Arial,sans-serif;line-height:1.6}
+button,select,input{font-family:inherit}
+.topbar{height:64px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:20}
+.brand-title{font-size:17px;font-weight:900;letter-spacing:.2px}
+.brand-sub{font-size:11px;color:var(--muted);font-weight:700;margin-top:2px}
+.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#1d4ed8;color:#fff}
+.btn.ghost{background:transparent}
+select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;background:#fff;color:var(--text)}
+.layout{display:grid;grid-template-columns:248px minmax(0,1fr) 320px;gap:16px;padding:16px;height:calc(100vh - 64px);min-height:620px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:auto}
+.steps{padding:16px}
+.panel-title{font-size:12px;font-weight:900;color:var(--muted);letter-spacing:1px;margin:2px 0 14px}
+.step-btn{width:100%;text-align:left;border:1px solid transparent;background:transparent;border-radius:12px;padding:10px 11px;margin-bottom:4px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;color:var(--text)}
+.step-btn:hover{background:#f8fafc}
+.step-btn.active{background:var(--accent-soft);border-color:#bfdbfe}
+.step-no{flex:0 0 26px;height:26px;border-radius:8px;background:#eef2f7;color:var(--muted);font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.step-btn.active .step-no{background:var(--accent);color:#fff}
+.step-name{font-size:12px;font-weight:800;line-height:1.45}
+.step-tag{font-size:10px;color:var(--muted);margin-top:3px}
+.maincol{display:flex;flex-direction:column;gap:12px;min-width:0}
+.progress-wrap{padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;align-items:center;gap:12px}
+.progress-track{flex:1;height:8px;border-radius:99px;background:#e8eef5;overflow:hidden}
+.progress-bar{height:100%;width:10%;background:linear-gradient(90deg,var(--accent),#60a5fa);border-radius:99px;transition:width .35s ease}
+.counter{font-size:12px;font-weight:900;color:var(--muted);white-space:nowrap}
+.stage{padding:14px;flex:1;min-height:0;display:flex;flex-direction:column}
+.mock{height:100%;min-height:540px;border:1px solid var(--line);border-radius:14px;background:#fbfcfe;display:flex;overflow:hidden}
+.mock-side{width:206px;flex:0 0 206px;background:#fff;border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column}
+.mock-brand{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:900;margin-bottom:18px}
+.mock-logo{width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
+.mock-user{font-size:10px;color:var(--muted);background:#f6f8fb;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:18px}
+.mock-nav-label{font-size:9px;color:#94a3b8;font-weight:900;letter-spacing:1px;margin:6px 8px}
+.mock-nav{display:flex;flex-direction:column;gap:3px}
+.mock-nav div{font-size:11px;padding:7px 9px;border-radius:9px;color:var(--muted);font-weight:700}
+.mock-nav div.on{background:var(--accent-soft);color:var(--accent);font-weight:900}
+.mock-body{flex:1;min-width:0;display:flex;flex-direction:column}
+.mock-head{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px}
+.mock-crumb{font-size:10px;color:#94a3b8;font-weight:800}
+.mock-head h3{margin:3px 0 0;font-size:17px}
+.mock-content{padding:18px;overflow:auto;flex:1}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card.tint{background:var(--accent-soft);border-color:#bfdbfe}
+.card.ok{background:var(--ok-soft);border-color:#a7f3d0}
+.card.warn{background:var(--warn-soft);border-color:#fde68a}
+.card.violet{background:var(--violet-soft);border-color:#ddd6fe}
+.card h4{margin:0 0 8px;font-size:13px}
+.card p{margin:4px 0;font-size:11px;color:var(--muted)}
+.big{font-size:16px;font-weight:900}
+.pill{display:inline-block;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:900;margin-right:6px}
+.pill.blue{background:#dbeafe;color:#1d4ed8}
+.pill.green{background:#d1fae5;color:#047857}
+.pill.amber{background:#fef3c7;color:#b45309}
+.pill.red{background:#fee2e2;color:#b91c1c}
+.pill.violet{background:#ede9fe;color:#6d28d9}
+.pill.gray{background:#e2e8f0;color:#475569}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.flow{display:flex;align-items:stretch;gap:5px}
+.flow .card{flex:1;margin-bottom:0;min-width:0}
+.flow .arrow{align-self:center;color:#94a3b8;font-size:13px;font-weight:900;flex:0 0 auto}
+.fake-input{border:1px solid var(--line);background:#f8fafc;border-radius:9px;padding:9px 11px;font-size:11px;color:#94a3b8}
+.fake-input.dark{color:var(--text);background:#fff}
+.row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:11px}
+.row:last-child{border-bottom:0}
+.row .grow{flex:1;min-width:0}
+.file{font-weight:800;color:var(--text)}
+.meta{font-size:10px;color:var(--muted)}
+.bar{height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.arrow{text-align:center;color:#94a3b8;font-size:13px;font-weight:900;margin:2px 0}
+.notes{padding:18px}
+.notes .badge{display:inline-block;border-radius:99px;padding:4px 10px;font-size:10px;font-weight:900;margin-bottom:10px}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.gray{background:#f1f5f9;color:var(--muted)}
+.notes h2{font-size:18px;margin:0 0 10px}
+.notes h5{font-size:11px;color:var(--muted);letter-spacing:1px;margin:18px 0 8px}
+.notes ul{margin:0;padding-left:18px}
+.notes li{font-size:12px;margin-bottom:7px}
+.checkbox-note{background:var(--warn-soft);border:1px solid #fde68a;border-radius:12px;padding:12px;font-size:11px;color:#92400e;margin-top:16px}
+.legend{font-size:11px;color:var(--muted);padding:0 4px}
+.legend b{color:var(--text)}
+.mismatch{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 16px 16px;box-shadow:var(--shadow)}
+.mismatch h3{margin:0 0 10px;font-size:14px}
+.mismatch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mismatch-grid div{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px;border-radius:0 10px 10px 0;font-size:11px}
+.mismatch-grid b{display:block;margin-bottom:4px}
+.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;opacity:0;pointer-events:none;transition:.2s;z-index:50}
+.toast.show{opacity:1}
+@media(max-width:1150px){
+  .layout{grid-template-columns:210px minmax(0,1fr);height:auto}
+  .notes{grid-column:1/-1}
+  .mismatch-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:760px){
+  .topbar{height:auto;padding:12px;align-items:flex-start;gap:10px;flex-direction:column}
+  .layout{display:block;padding:10px}
+  .panel{margin-bottom:10px}
+  .mock-side{display:none}
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+  .mismatch-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <div class="brand-title">日常使用流程演示 · v1</div>
+    <div class="brand-sub">暖通室信息化管理平台 ｜ 自动播放 + 手动单步 ｜ 用于核对“我理解的流程”</div>
+  </div>
+  <div class="controls">
+    <button class="btn primary" id="autoBtn">自动演示</button>
+    <button class="btn" id="prevBtn">上一步</button>
+    <button class="btn" id="nextBtn">下一步</button>
+    <button class="btn ghost" id="resetBtn">重新开始</button>
+    <select id="speed" aria-label="播放速度">
+      <option value="5200">慢速</option>
+      <option value="3800" selected>中速</option>
+      <option value="2500">快速</option>
+    </select>
+    <button class="btn" id="copyBtn">一键复制全文</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="panel steps">
+    <div class="panel-title">流程步骤（点击可跳转）</div>
+    <div id="stepList"></div>
+  </aside>
+
+  <div class="maincol">
+    <div class="progress-wrap">
+      <div class="counter" id="counter">步骤 1 / 10</div>
+      <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="legend">蓝色 = 当前演示位置</div>
+    </div>
+    <section class="panel stage">
+      <div class="mock" id="mock"></div>
+    </section>
+  </div>
+
+  <aside class="panel notes">
+    <div id="stepBadge"></div>
+    <h2 id="stepTitle"></h2>
+    <h5>我理解的关键动作</h5>
+    <ul id="stepKey"></ul>
+    <h5>为什么这样做</h5>
+    <div id="stepWhy" style="font-size:12px"></div>
+    <h5>对应需求 / 当前程序状态</h5>
+    <div id="stepMap" style="font-size:12px"></div>
+    <div class="checkbox-note" id="stepCheck"></div>
+  </aside>
+</div>
+
+<section class="mismatch">
+  <h3>请重点核对：这些地方最容易理解不一致</h3>
+  <div class="mismatch-grid">
+    <div><b>平台不是第二个审批系统</b>校审闭环记录的是项目内部意见与整改；正式审批、出版、资料审查仍以公司系统为准。</div>
+    <div><b>不是每天填工作量</b>文件上传、状态变化、校审流转自动留痕；只有重要决定、跨专业待办、异常或交接才补一句说明。</div>
+    <div><b>设备台账目前是需求，不是程序</b>需求里要求 Excel 导入与多人协作维护；当前程序尚未提供，演示中只作分支说明。</div>
+    <div><b>本机选目录不等于服务器扫描</b>文件由设计人员在自己电脑上选择并上传；不要求先把资料集中到服务器共享目录。</div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const navItems = ['平台能力','项目总览','设计过程','规范校审','标准化设计','本机资料导入','常见问题','账户管理'];
+
+function shell(active, title, content){
+  const nav = navItems.map(n => `<div class="${n===active?'on':''}">${n}</div>`).join('');
+  return `<div class="mock-side">
+      <div class="mock-brand"><span class="mock-logo">H</span><span>暖通室信息化管理平台</span></div>
+      <div class="mock-user">当前账户：admin ｜ 当前项目可编辑</div>
+      <div class="mock-nav-label">项目导航</div>
+      <div class="mock-nav"><div>徐大堡项目 / 化学实验室</div></div>
+      <div class="mock-nav-label">功能菜单</div>
+      <div class="mock-nav">${nav}</div>
+    </div>
+    <div class="mock-body">
+      <div class="mock-head"><div class="mock-crumb">徐大堡项目 / 化学实验室</div><h3>${title}</h3></div>
+      <div class="mock-content">${content}</div>
+    </div>`;
+}
+
+const steps = [
+  {
+    id:'start', tag:'起点：先查，不先填', title:'登录并选择项目，不急着录资料',
+    key:['登录平台后，左侧按“项目 > 子项”找到自己有权限的项目。','进入项目先看总览和当前阶段，而不是先打开表单填工作量。','公司正式系统仍按原来的方法使用。'],
+    why:'需求的日常原则是“查得到就不重复录”。平台只记录对协作和交接有价值的信息。',
+    map:'需求 2.1 / 5.1；程序状态：登录、项目导航、权限控制已实现。',
+    check:'请核对：你希望每天打开平台的第一件事，是先看项目现状，还是先看到待办清单？',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('项目总览','项目总览',`
+      <div class="card tint"><div class="big">先查，不重复建</div><p>打开项目 → 看当前阶段、已有文件和历史记录 → 判断是否需要补资料。普通工作不需要在这里打卡。</p></div>
+      <div class="grid3">
+        <div class="card"><h4>当前项目</h4><p class="big">徐大堡项目</p><p>子项：化学实验室</p></div>
+        <div class="card"><h4>当前阶段</h4><p class="big">施工图设计</p><p>阶段确认由授权负责人执行</p></div>
+        <div class="card"><h4>可操作内容</h4><p><span class="pill green">可编辑</span></p><p>上传 / 校审 / 导出均按项目权限</p></div>
+      </div>`)
+  },
+  {
+    id:'overview', tag:'总览：掌握当前状态', title:'看项目快照：阶段、重点事项、最近变化',
+    key:['在“项目总览”确认当前阶段、执行重点和未关闭校审数量。','“平台能力”页汇总三项核心能力与自动留痕的最近动态。','新人接手时可以从这里快速了解项目背景。'],
+    why:'需求 5.7 / 5.8 要求以项目为入口动态展示进展、重点事项、待反馈和责任状态，减少口头交接。',
+    map:'需求 5.7 / 5.8；程序状态：项目总览、平台能力总览、树图/列表切换已实现。',
+    check:'请核对：你希望“最近动态”里优先看到文件上传、阶段变化，还是校审状态变化？',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('平台能力','平台能力与信息化动态',`
+      <div class="grid3">
+        <div class="card tint"><h4>规范校审流程 <span class="pill blue">试用中</span></h4><p>意见 → 整改 → 复核 → 关闭</p></div>
+        <div class="card ok"><h4>标准化设计 <span class="pill green">已实现</span></h4><p>模板、阶段清单、检查要点</p></div>
+        <div class="card violet"><h4>汇总设计文件 <span class="pill green">已实现</span></h4><p>按项目归集、查找、下载</p></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h4>当前项目快照</h4><div class="row"><span class="grow">当前阶段</span><span class="pill blue">施工图设计</span></div><div class="row"><span class="grow">未关闭校审</span><span class="pill amber">2 条</span></div><div class="row"><span class="grow">执行重点</span><span>3 项待跟进</span></div></div>
+        <div class="card"><h4>最近动态（自动留痕）</h4><div class="row"><span class="grow">上传通风布置图 B版</span><span class="meta">10:24</span></div><div class="row"><span class="grow">校审记录提交整改</span><span class="meta">09:50</span></div><div class="row"><span class="grow">阶段确认：施工图设计</span><span class="meta">昨天</span></div></div>
+      </div>`)
+  },
+  {
+    id:'search', tag:'查找：先确认有没有', title:'先查已有资料，避免重复上传',
+    key:['按项目、子项、阶段、类别、设备名/位号、资料编号查找。','找到资料就直接下载或引用，不再重复录入一整套元数据。','跨项目同类资料复用仍是需求目标，当前程序尚未提供。'],
+    why:'需求强调“查得到就不重复录；已有来源编号或链接就不再手工抄录整套资料信息”。',
+    map:'需求 2.1 / 5.7；程序状态：项目内树图/列表浏览已实现，跨项目检索待实施。',
+    check:'请核对：你查找资料时，最常用的是文件名、设备位号、资料编号，还是设计阶段？',
+    badge:'部分实现', badgeClass:'warn',
+    scene: shell('项目总览','查找项目资料',`
+      <div class="fake-input dark">搜索：文件名 / 设备位号 / 资料编号 / 关键词</div>
+      <div class="card" style="margin-top:12px">
+        <div class="row"><span class="grow"><span class="file">通风布置图_B版.dwg</span><div class="meta">施工图设计 · 输出成果 · 2.4 MB · 来源：项目工作文件</div></span><span class="pill green">可下载</span></div>
+        <div class="row"><span class="grow"><span class="file">设备规格书数据表_V2.xlsx</span><div class="meta">施工图设计 · 设备资料 · 860 KB · 来源：正式资料副本</div></span><span class="pill blue">有 2 个历史版本</span></div>
+        <div class="row"><span class="grow"><span class="file">房间冷热负荷计算书.pdf</span><div class="meta">施工图设计 · 计算结果 · 1.1 MB</div></span><span class="pill green">可下载</span></div>
+      </div>
+      <div class="card warn"><b>需求中、程序未提供：</b>目前还不能跨项目一次搜出同类资料，也不能按设备台账联动检索；演示中仅按需求口径表达。</div>`)
+  },
+  {
+    id:'decide', tag:'判断：要不要补资料', title:'判断资料身份，只补缺少的协作资料',
+    key:['资料已在正式系统、项目内不需要副本：只登记编号或链接（需求目标，程序待实施）。','确有项目成员集中查看/下载需要、且公司允许：上传一份副本并标明来源。','副本和索引不改变资料在公司正式系统中的效力。'],
+    why:'需求 4 / 5.2 要求明确资料身份，避免把归档变成重复上传任务。',
+    map:'需求 4 / 5.2；程序状态：上传副本已实现，编号/链接登记待实施。',
+    check:'请核对：是否所有“只记编号不传文件”的场景都需要保留？哪些资料必须上传副本？',
+    badge:'部分实现', badgeClass:'warn',
+    scene: shell('本机资料导入','资料身份判断',`
+      <div class="grid2">
+        <div class="card warn"><span class="pill amber">需求目标 · 程序待实施</span><h4>正式系统已有资料</h4><p>只在平台记录资料编号或链接，名称/上传人/时间自动带出。</p><p>目的：减少重复录入，不复制正式系统已有信息。</p></div>
+        <div class="card ok"><span class="pill green">程序已实现</span><h4>需要项目内集中下载</h4><p>上传一份获准使用的副本，标明来源与版本。</p><p>目的：让项目成员按项目快速找到并下载。</p></div>
+      </div>
+      <div class="arrow">↓ 需要上传时，进入下一步</div>
+      <div class="card tint"><b>少操作原则：</b>批量能完成就不逐项操作；没有协作或追溯价值的普通工作不要求录入。</div>`)
+  },
+  {
+    id:'import', tag:'上传：本机选目录', title:'在自己电脑上选目录 → 预览 → 归类 → 上传',
+    key:['网页里选择本机文件夹，按相对层级预览文件。','按阶段与类别批量归类，勾选需要的文件。','目标项目和子项由当前页面自动带入，逐组显示上传进度。'],
+    why:'正式需求明确：用户本机选目录 → 预览筛选 → 上传服务器；不得把“先集中到服务器目录”作为前置条件。',
+    map:'需求 5.2；程序状态：本机目录导入基础链路已实现，失败重试与大小限制待补。',
+    check:'请核对：你希望按文件夹名自动归类到现有 7 类，还是每次上传前都手动确认分类？',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('本机资料导入','本机资料导入',`
+      <div class="grid2">
+        <div class="card"><h4>01 选择本机目录</h4><div class="fake-input">D:\\项目资料\\化学实验室\\施工图设计\\</div><div class="meta" style="margin-top:8px">预览：输出成果 / 计算结果 / 设备资料 共 3 组、12 个文件</div></div>
+        <div class="card"><h4>02 批量归类</h4><div class="row"><span class="grow">阶段</span><span class="pill blue">施工图设计</span></div><div class="row"><span class="grow">目标子项</span><span>化学实验室</span></div><div class="row"><span class="grow">类别默认值</span><span>按目录名带入</span></div></div>
+      </div>
+      <div class="card"><h4>03 上传进度</h4><div class="row"><span class="grow">输出成果（5 个文件）</span><span class="pill green">完成</span></div><div class="bar"><i style="width:100%"></i></div><div class="row"><span class="grow">计算结果（4 个文件）</span><span class="pill blue">上传中 3/4</span></div><div class="bar"><i style="width:75%"></i></div><div class="row"><span class="grow">设备资料（3 个文件）</span><span class="pill gray">等待</span></div><div class="bar"><i style="width:8%"></i></div></div>`)
+  },
+  {
+    id:'process', tag:'留痕：过程自动记录', title:'上传后自动留痕，只在必要时补一句说明',
+    key:['文件上传、状态变化等关键操作由系统自动记录操作人与时间。','只有重要设计决定、跨专业待办、异常问题或交接内容才手动补说明。','不要求每天写普通工作日志。'],
+    why:'需求 5.4 / 6 明确：设计过程活动由常用操作自动记录，重要操作自动留痕。',
+    map:'需求 5.4 / 6；程序状态：设计过程树、操作日志、过程记录已实现。',
+    check:'请核对：哪些内容你认为必须手动补说明？我们现在只列了四类，是否漏了场景？',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('设计过程','设计过程',`
+      <div class="card tint"><b>自动留痕示例</b><div class="row"><span class="grow">上传文件：通风布置图_B版.dwg</span><span class="pill blue">系统自动</span></div><div class="row"><span class="grow">阶段确认：施工图设计</span><span class="pill blue">系统自动</span></div></div>
+      <div class="card"><h4>手动补充（可选，仅重要事项）</h4><div class="fake-input">例如：与结构专业确认设备基础洞口尺寸已变更，需同步修改设备定位图。</div><div class="meta" style="margin-top:8px">适用类型：重要决定 / 跨专业待办 / 异常问题 / 交接说明</div></div>
+      <div class="grid3"><div class="card"><h4>设计输入</h4><p>自动带入模板</p></div><div class="card"><h4>计算结果</h4><p>已上传 4 份</p></div><div class="card"><h4>输出成果</h4><p>已上传 5 份</p></div></div>`)
+  },
+  {
+    id:'checklist', tag:'清单：只更新变化项', title:'阶段清单只处理适用项，不逐项打卡',
+    key:['默认只显示当前阶段和项目已启用的条目。','状态控制为待处理 / 处理中 / 待反馈 / 完成，负责人默认带入。','备注、计划日期、附件都是可选项，不因未填无关项阻塞工作。'],
+    why:'需求 5.5 要求清单轻量记录，系统不得仅依据勾选数量或文件数自动认定阶段完成。',
+    map:'需求 5.5；程序状态：模板与任务状态已实现，模板快照和适用性配置待完善。',
+    check:'请核对：阶段完成是否必须由授权负责人确认？我们现在是人工确认，不按勾选数量自动判定。',
+    badge:'基础能力', badgeClass:'warn',
+    scene: shell('标准化设计','阶段清单（施工图设计）',`
+      <div class="card"><h4>对外提资 · 只更新变化行</h4>
+        <div class="row"><span class="grow">给结构条件：设备基础与洞口</span><span class="pill green">完成</span></div>
+        <div class="row"><span class="grow">给电气条件：用电设备与连锁</span><span class="pill amber">待反馈</span></div>
+        <div class="row"><span class="grow">给仪控条件：报警与仪表</span><span class="pill gray">待处理</span></div>
+        <div class="meta" style="margin-top:8px">仅“给电气条件”本轮改为待反馈；其余保持原状，不需要逐项确认。</div>
+      </div>
+      <div class="card ok"><b>阶段确认：</b>只在项目约定的关键交付节点由授权负责人执行，并自动记录操作人和时间。</div>
+      <div class="card warn"><b>不自动判定：</b>文件数量或勾选数量不会自动让阶段变成“完成”。</div>`)
+  },
+  {
+    id:'review', tag:'校审：形成闭环', title:'发起校审 → 整改 → 复核 → 关闭',
+    key:['可发起自校、互校、专业校审，填写意见、规范引用和整改责任人。','设计人员填写整改回复，校审人员复核通过后关闭或退回整改。','保留发起人、校审人、整改人、时间、意见、回复和复核结果。'],
+    why:'“规范校审流程”是题目要求的三项核心能力之一；公司正式审批与出版仍以公司系统为准。',
+    map:'需求 1.1 / 5.6；程序状态：本轮新增校审记录与流转，标记为“试用中”。',
+    check:'请核对：自校、互校、专业校审是否都要走同一套闭环？退回整改是否需要强制填写原因？',
+    badge:'试用中', badgeClass:'warn',
+    scene: shell('规范校审','规范校审与问题闭环',`
+      <div class="card"><h4>校审对象：通风布置图_B版</h4><div class="row"><span class="grow">类型</span><span class="pill blue">互校</span></div><div class="row"><span class="grow">校审意见</span><span>风管穿墙处缺少防火阀标注</span></div><div class="row"><span class="grow">规范引用</span><span class="meta">名称 / 编号 / 条款 / 链接</span></div></div>
+      <div class="flow">
+        <div class="card tint"><h4>1 发起</h4><p>校审人填写意见与责任人</p></div>
+        <div class="arrow">→</div>
+        <div class="card"><h4>2 整改</h4><p>设计人员提交回复</p></div>
+        <div class="arrow">→</div>
+        <div class="card warn"><h4>3 复核</h4><p>通过或退回整改</p></div>
+        <div class="arrow">→</div>
+        <div class="card ok"><h4>4 关闭</h4><p>保留完整流转记录</p></div>
+      </div>
+      <div class="card" style="margin-top:12px"><h4>边界</h4><p>正式审批、出版与资料审查仍在公司系统完成，本模块只记录项目内闭环过程。</p></div>`)
+  },
+  {
+    id:'download', tag:'交付：按需下载导出', title:'需要时检索、下载或按阶段导出',
+    key:['单文件下载、筛选结果打包、按阶段导出、整个项目导出。','导出保留目录结构或清单，并标明资料来源与版本。','导出范围服从权限；只读账号的下载规则由部门权限配置决定。'],
+    why:'需求 5.7 要求“汇总设计文件”能力以项目为入口支持检索与下载。',
+    map:'需求 5.2 / 5.7；程序状态：项目/阶段导出已实现，导出清单与跨项目检索待完善。',
+    check:'请核对：导出时你更需要“保留目录结构的 ZIP”，还是“带来源与版本号的清单表格”？',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('项目总览','下载与导出',`
+      <div class="card"><h4>筛选结果</h4><div class="row"><span class="grow"><span class="file">施工图设计 / 输出成果（5 份）</span></span><span class="pill blue">可打包</span></div><div class="row"><span class="grow"><span class="file">施工图设计 / 计算结果（4 份）</span></span><span class="pill blue">可打包</span></div></div>
+      <div class="grid3">
+        <div class="card ok"><h4>单文件下载</h4><p>按文件直接下载原文件</p></div>
+        <div class="card tint"><h4>按阶段导出</h4><p>施工图设计 ZIP</p></div>
+        <div class="card violet"><h4>整个项目导出</h4><p>含 manifest 清单</p></div>
+      </div>
+      <div class="card warn"><b>需注意：</b>正式资料的效力仍以公司系统为准；平台导出的是授权范围内的副本或索引。</div>`)
+  },
+  {
+    id:'handover', tag:'收尾：信息留在项目里', title:'同事接手时，从动态与总览快速了解项目',
+    key:['新加入人员可从项目总览看到阶段、重点事项、设备资料、文件和校审过程。','关键操作自动留痕，减少重复询问与口头交接。','不要求为交接另写一份普通工作日志。'],
+    why:'需求 5.8 的信息化动态管理目标：让项目背景、进展、重点事项和变化及时可见。',
+    map:'需求 5.8 / 8；程序状态：平台能力、项目总览、自动留痕已实现。',
+    check:'请核对：交接场景中你还希望看到哪些信息？我们现在展示阶段、重点事项、校审和最近动态。',
+    badge:'已实现', badgeClass:'ok',
+    scene: shell('平台能力','交接视图：项目动态',`
+      <div class="card tint"><div class="big">不用口头交接，也能看懂项目现在在哪里</div><p>阶段、执行重点、未关闭校审、最近文件变化和责任人，都从项目入口可见。</p></div>
+      <div class="grid2">
+        <div class="card"><h4>当前状态</h4><div class="row"><span class="grow">设计阶段</span><span class="pill blue">施工图设计</span></div><div class="row"><span class="grow">未关闭校审</span><span class="pill amber">2 条</span></div><div class="row"><span class="grow">重点事项</span><span>3 项待跟进</span></div></div>
+        <div class="card"><h4>最近变化</h4><div class="row"><span class="grow">上传通风布置图 B版</span><span class="meta">10:24</span></div><div class="row"><span class="grow">校审退回整改</span><span class="meta">09:50</span></div><div class="row"><span class="grow">阶段确认</span><span class="meta">昨天</span></div></div>
+      </div>`)
+  }
+];
+
+let index = 0, timer = null;
+
+function render(){
+  const s = steps[index];
+  document.getElementById('stepList').innerHTML = steps.map((item,i)=>`
+    <button class="step-btn ${i===index?'active':''}" data-i="${i}">
+      <span class="step-no">${String(i+1).padStart(2,'0')}</span>
+      <span><span class="step-name">${item.title}</span><div class="step-tag">${item.tag}</div></span>
+    </button>`).join('');
+  document.querySelectorAll('.step-btn').forEach(btn=>btn.addEventListener('click',()=>{pause();go(Number(btn.dataset.i));}));
+  document.getElementById('mock').innerHTML = s.scene;
+  document.getElementById('counter').textContent = `步骤 ${index+1} / ${steps.length}`;
+  document.getElementById('progressBar').style.width = ((index+1)/steps.length*100)+'%';
+  document.getElementById('stepBadge').innerHTML = `<span class="badge ${s.badgeClass}">${s.badge}</span>`;
+  document.getElementById('stepTitle').textContent = s.title;
+  document.getElementById('stepKey').innerHTML = s.key.map(k=>`<li>${k}</li>`).join('');
+  document.getElementById('stepWhy').textContent = s.why;
+  document.getElementById('stepMap').textContent = s.map;
+  document.getElementById('stepCheck').innerHTML = `<b>请核对：</b>${s.check}`;
+}
+
+function go(i){ index = Math.max(0,Math.min(steps.length-1,i)); render(); }
+function pause(){ if(timer){clearInterval(timer);timer=null;document.getElementById('autoBtn').textContent='自动演示';document.getElementById('autoBtn').classList.add('primary');} }
+function play(){
+  if(timer) return;
+  document.getElementById('autoBtn').textContent='暂停';
+  document.getElementById('autoBtn').classList.remove('primary');
+  const interval = Number(document.getElementById('speed').value);
+  timer = setInterval(()=>{
+    if(index >= steps.length-1){pause();return;}
+    go(index+1);
+  }, interval);
+}
+
+document.getElementById('autoBtn').addEventListener('click',()=>{ timer?pause():play(); });
+document.getElementById('prevBtn').addEventListener('click',()=>{pause();go(index-1);});
+document.getElementById('nextBtn').addEventListener('click',()=>{pause();go(index+1);});
+document.getElementById('resetBtn').addEventListener('click',()=>{pause();go(0);});
+document.getElementById('speed').addEventListener('change',()=>{ if(timer){pause();play();} });
+
+function toast(text){
+  const el=document.getElementById('toast');
+  el.textContent=text;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),1800);
+}
+document.getElementById('copyBtn').addEventListener('click',async()=>{
+  const text = steps.map((s,i)=>`${String(i+1).padStart(2,'0')}. ${s.title}\n关键动作：${s.key.join('；')}\n原因：${s.why}\n需求/状态：${s.map}\n请核对：${s.check}`).join('\n\n');
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(text); }
+    else{
+      const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+    }
+    toast('已复制完整流程说明');
+  }catch(e){ toast('复制失败，请手动选择文本'); }
+});
+
+render();
+</script>
+</body>
+</html>

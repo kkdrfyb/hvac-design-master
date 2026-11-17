@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暖通设计管家 · 第一阶段实施方案（修订版 v2）</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --text:#1d2430; --text2:#5a6575; --line:#e3e8ef;
+  --brand:#1f6feb; --brand-soft:#eaf2ff; --ok:#0f7b5f; --ok-soft:#e8f6f0;
+  --warn:#b06a00; --warn-soft:#fff4e2; --danger:#c02b2b; --danger-soft:#fdecec;
+  --code-bg:#f1f4f8;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  font-size:15px;line-height:1.78;-webkit-font-smoothing:antialiased}
+.layout{display:flex;max-width:1440px;margin:0 auto;align-items:flex-start}
+.toc{position:sticky;top:0;height:100vh;overflow-y:auto;width:270px;flex:0 0 270px;
+  background:var(--panel);border-right:1px solid var(--line);padding:26px 18px 40px}
+.toc h4{margin:0 0 6px;font-size:13px;letter-spacing:.08em;color:var(--text2);text-transform:uppercase}
+.toc .sub{font-size:12px;color:var(--text2);margin:0 0 18px;line-height:1.5}
+.toc a{display:block;text-decoration:none;color:var(--text2);font-size:13px;
+  padding:5px 10px;border-radius:6px;border-left:2px solid transparent;margin-bottom:1px}
+.toc a:hover{background:var(--brand-soft);color:var(--brand)}
+.toc a.lv3{padding-left:24px;font-size:12.4px;color:#7b8595}
+.toc .tools{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+.btn{display:inline-block;width:100%;border:1px solid var(--line);background:#fff;color:var(--text);
+  padding:9px 12px;border-radius:7px;font-size:13px;cursor:pointer;text-align:center;margin-bottom:8px}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:#1859c4;color:#fff}
+main{flex:1;min-width:0;padding:34px 46px 80px;max-width:1080px}
+.hero{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px 32px;margin-bottom:26px}
+.kicker{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{font-size:12px;padding:3px 10px;border-radius:20px;background:#f0f3f8;color:var(--text2);border:1px solid var(--line)}
+.chip.brand{background:var(--brand-soft);color:var(--brand);border-color:#c9ddff}
+h1{font-size:27px;line-height:1.35;margin:0 0 12px;letter-spacing:-.01em}
+.hero .meta{font-size:13px;color:var(--text2);line-height:1.85}
+.notice{background:var(--brand-soft);border:1px solid #c9ddff;border-radius:10px;
+  padding:12px 16px;font-size:13.5px;color:#204a86;margin-top:16px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 32px 34px}
+article h2{font-size:20px;margin:34px 0 14px;padding:12px 0 10px;border-bottom:2px solid var(--line);scroll-margin-top:16px}
+article h3{font-size:16px;margin:24px 0 10px;color:#2c394b;scroll-margin-top:16px}
+article h1{font-size:24px;margin:22px 0 8px}
+p{margin:10px 0 14px}
+strong{color:#12233e;font-weight:650}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--code-bg);border:1px solid #e0e7f0;border-radius:4px;
+  padding:1px 5px;font-size:12.8px;font-family:Consolas,"SFMono-Regular",Menlo,monospace;color:#a3372c}
+pre{background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:14px 16px;overflow-x:auto;line-height:1.7}
+pre code{background:none;border:none;padding:0;color:#263445;font-size:13px}
+hr{border:none;border-top:1px solid var(--line);margin:26px 0}
+blockquote{border-left:3px solid var(--brand);background:#f7faff;margin:14px 0;padding:10px 16px;
+  border-radius:0 8px 8px 0;color:var(--text2);font-size:14px}
+ul,ol{margin:10px 0 16px;padding-left:24px}
+li{margin:5px 0}
+.tw{overflow-x:auto;margin:14px 0 20px;border:1px solid var(--line);border-radius:9px}
+table{border-collapse:collapse;width:100%;font-size:13.6px;min-width:640px}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+  padding:9px 12px;text-align:left;vertical-align:top;line-height:1.65}
+th{background:#f3f6fa;font-weight:650;color:#2c394b;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+th:last-child,td:last-child{border-right:none}
+tbody tr:hover{background:#fafbfd}
+footer{font-size:12.5px;color:var(--text2);padding:22px 46px 40px;line-height:1.8}
+@media(max-width:960px){
+  .layout{display:block}.toc{position:static;width:auto;height:auto;border-right:none;
+    border-bottom:1px solid var(--line);padding:18px}
+  .toc a{display:inline-block;margin:2px}
+  main{padding:22px 18px 50px}article{padding:6px 18px 26px}footer{padding:18px}
+}
+@media print{
+  body{background:#fff;font-size:12px}
+  .toc,.btn,.tools{display:none!important}
+  .layout{display:block}main{max-width:none;padding:0}article,.hero{border:none;padding:0}
+  h2{page-break-after:avoid}table{page-break-inside:auto}tr{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="toc">
+    <h4>目录</h4>
+    <p class="sub">修订版 v2 · 2026-11-16<br>按 ChatGPT 第 6 轮业务决策重写</p>
+    <a class="lv2" href="#sec-2">〇、本轮结论：三条决策怎么落到方案上</a>
+    <a class="lv3" href="#sec-3">0.1 一处需要同步给 ChatGPT 的规则澄清：Git 提交</a>
+    <a class="lv3" href="#sec-4">0.2 一处需要同步给 ChatGPT 的事实更正：安全整改的相当一部分被架构变更本身消化了</a>
+    <a class="lv3" href="#sec-5">0.3 一处对「共享下载」口径的保留</a>
+    <a class="lv3" href="#sec-6">0.4 网页交付规则（继续沿用）</a>
+    <a class="lv2" href="#sec-7">一、正式需求（业务语言）</a>
+    <a class="lv3" href="#sec-8">1.1 本期必须能跑通的完整业务链</a>
+    <a class="lv3" href="#sec-9">1.2 打通之后必须能做到的四件事（来自 GPT 第 6 轮，逐条按使用场景验收）</a>
+    <a class="lv3" href="#sec-10">1.3 本期明确不做</a>
+    <a class="lv2" href="#sec-11">二、选型评估：继续用网页，还是改用 Tauri 桌面客户端</a>
+    <a class="lv3" href="#sec-12">2.1 四个维度对比</a>
+    <a class="lv3" href="#sec-13">2.2 成本判断（一句话）</a>
+    <a class="lv3" href="#sec-14">2.3 推荐与理由</a>
+    <a class="lv3" href="#sec-15">2.4 Tauri 的触发条件（满足两条以上再正式评估迁移）</a>
+    <a class="lv2" href="#sec-16">三、文件归档与检索：先沿用现有分类，再按场景验收</a>
+    <a class="lv3" href="#sec-17">3.1 只读核查结论：现有分类信息够不够</a>
+    <a class="lv3" href="#sec-18">3.2 本期做法（业务语言）</a>
+    <a class="lv3" href="#sec-19">3.3 四个场景的验收动作（FR-12 按场景验收）</a>
+    <a class="lv2" href="#sec-20">四、修订后的任务顺序（S0 ~ S4）</a>
+    <a class="lv3" href="#sec-21">4.0 总览</a>
+    <a class="lv3" href="#sec-22">4.1 S0 · 保存现状（不覆盖、不清理、不提交既有改动）</a>
+    <a class="lv3" href="#sec-23">4.2 S1 · 本机目录选择与预览</a>
+    <a class="lv3" href="#sec-24">4.3 S2 · 上传到服务器</a>
+    <a class="lv3" href="#sec-25">4.4 S3 · 查询与下载（含跨项目检索）</a>
+    <a class="lv3" href="#sec-26">4.5 S4 · 小步补齐与试用前检查</a>
+    <a class="lv3" href="#sec-27">4.6 安全项怎么「按优先级处理」，而不是变成前置门槛</a>
+    <a class="lv3" href="#sec-28">4.7 任务独立性</a>
+    <a class="lv2" href="#sec-29">五、每阶段的配套测试（最小必要集）</a>
+    <a class="lv3" href="#sec-30">5.1 最小可用原型的实操验收流程（一次完整走通）</a>
+    <a class="lv2" href="#sec-31">六、验收标准总表</a>
+    <a class="lv2" href="#sec-32">七、现有代码复用清单（开发方案负责，业务人员可略过）</a>
+    <a class="lv2" href="#sec-33">八、待决策事项（只列业务问题，不要求你决定数据库结构）</a>
+    <a class="lv2" href="#sec-34">九、v1 → v2 差异对照</a>
+    <a class="lv2" href="#sec-35">十、执行边界与本轮变更核对</a>
+    <a class="lv2" href="#sec-36">附：资料索引</a>
+    <div class="tools">
+      <button class="btn primary" id="copy-plan">📋 复制方案全文</button>
+      <button class="btn" onclick="window.print()">🖨 打印 / 存为 PDF</button>
+      <button class="btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ 回到顶部</button>
+      <p class="sub" id="copy-note" style="margin-top:10px">复制内容与 Markdown 原文逐字一致，可直接贴回 ChatGPT。</p>
+    </div>
+  </aside>
+  <main>
+    <div class="hero">
+      <div class="kicker">
+        <span class="chip brand">方案 · 修订版 v2</span>
+        <span class="chip">第 6 轮往返</span>
+        <span class="chip">只更新方案 · 不改代码</span>
+        <span class="chip">2026-11-16</span>
+      </div>
+      <h1>暖通设计管家 · 第一阶段实施方案（修订版 v2）</h1>
+      <div class="meta">
+        目标：<b>用户本机选目录 → 预览文件 → 选择上传 → 服务器保存 → 其他用户查找和下载</b><br>
+        本轮变化：取消「先集中到服务器目录」前置条件 · 新增网页 vs Tauri 选型评估 · 归档沿用现有分类并按场景验收 · 安全与测试改为随功能小步配套。
+      </div>
+      <div class="notice">
+        <b>本页是方案，不是改动。</b>未修改任何业务文件、代码、配置或数据；v1 方案与全部历史网页原样保留。
+        全文优先用业务语言描述目标、操作、交付与验收；标注「开发方案负责」的技术细节可略过。
+      </div>
+    </div>
+    <article>
+<h1 id="sec-1">暖通设计管家 · 第一阶段实施方案（修订版 v2）</h1>
+<blockquote><strong>版本</strong>：v2（2026-11-16） · <strong>上一版</strong>：<code>phase1-plan-revised-v1.md</code> / <code>.html</code> 原样保留<br><strong>依据</strong>：ChatGPT 第 6 轮答复（分享 <code>t_6afaa7e4…</code>）中的三条业务决策与四项协作原则，以及对当前工作副本的两组只读核查<br><strong>性质</strong>：<strong>只更新方案，不修改业务代码</strong>。全文优先用业务语言描述「实现什么、用户怎么操作、得到什么结果、怎么验收」；技术实现细节集中在标注「开发方案负责」的章节<br><strong>历史记录</strong>：讨论链另升版为 <code>project-plan-review-v5.html</code>，第 1~5 轮内容全部保留，新增第 6 轮；所有历史 HTML 不覆盖、不删除</blockquote>
+<hr>
+<h2 id="sec-2">〇、本轮结论：三条决策怎么落到方案上</h2>
+<p>ChatGPT 这一轮把方向彻底纠正过来了：<strong>目标是每个用户扫自己电脑上的目录、把选中的文件上传到服务器、供部门其他人查看下载</strong>，之前把「扫服务器目录」当成需求，是把现有程序的行为误当成了目标。同时它把「先做全面安全整改 / 先建完整测试体系」从开工门槛降为随功能小步配套。这三条我全部接受，v1 里对应的内容按下面改。</p>
+<div class="tw"><table><thead><tr><th>#</th><th>本轮业务决策</th><th>v1 里的对应内容</th><th>v2 怎么改</th></tr></thead><tbody><tr><td>1</td><td>本机选目录 → 上传 → 其他人查看下载；<strong>不得把「先集中到服务器目录」作为前置条件</strong>；评估网页 vs Tauri 并给推荐，但暂不迁移</td><td>v1 第 2 节把「资料先集中到共享盘 + 配根目录白名单」写成产品级边界</td><td><strong>删除该前置条件</strong>，本期不设任何资料集中要求；新增第二章选型评估与推荐</td></tr><tr><td>2</td><td>优先沿用现有分类信息，避免重复建字段或枚举；按 4 个实际使用场景验收，FR-12 不只检查是否加了字段</td><td>v1 第 5/9 节提出「逻辑归档键 + 单一枚举源 + <code>system</code> 为唯一新增候选」</td><td>改为「先沿用、后按场景验收」：本期<strong>不新建分类字段体系</strong>，只复用已有枚举并补一个查询能力；新增第三章逐场景验收表</td></tr><tr><td>3</td><td>不要求先完成全面安全整改或完整测试体系；先保存现状确保可恢复，再打通最小可用原型；每任务配套必要测试与实操验收</td><td>v1 把 S0 设为「安全修复与基线实测」Gate，测试章要求先补基建</td><td>S0 改为「保存现状 + 说明如何启动」，安全与测试拆成<strong>随链必做 / 多人试用前 / 按风险排期</strong>三档；新增第五章最小测试集与实操验收流程</td></tr><tr><td>4</td><td>优先讲功能目标、用户操作、交付结果、验收标准；任务独立可单独验收；不覆盖或清理现有改动、不擅自提交代码</td><td>v1 以技术方案与代码行号为主</td><td>第四章按「目标 / 操作 / 交付 / 单独验收 / 回滚」重写；第八章待决策项只列业务问题，不要求你决定数据库结构</td></tr></tbody></table></div>
+<h3 id="sec-3">0.1 一处需要同步给 ChatGPT 的规则澄清：Git 提交</h3>
+<p>任务单第 4 条写「未经明确同意，不要……擅自提交代码」。这句话的适用范围需要说清，否则会重演上一轮的误解：</p>
+<ul><li>你上一轮已经明确拍板：<strong>「默认修改后还是要提交的」</strong>。<code>AGENTS.md:18</code> 是每轮日志自动提交、<code>:21</code> 约束的是<strong>日志 commit 不夹带无关文件</strong>、<code>:22</code> 不自动 push；从来没有「代码不许提交」这条规则。</li><li>前 4 轮只有日志 commit，是因为那些轮次是只读评审 / 审计、没有代码改动，不是规则禁止。</li><li>本轮<strong>没有修改任何业务代码</strong>，所以「擅自提交代码」这件事没有发生。按你的长期口径，本轮新增的<strong>方案文档默认独立提交</strong>，日志单独一个 commit，不 push、不改历史；工作区既有的 <strong>46 项未提交改动</strong>仍然不清理、不覆盖、不代为提交 —— 这一条与任务单「不覆盖或清理现有改动」完全一致。</li><li>结论：<strong>代码基线 ≠ 立刻提交所有代码</strong>（这点 ChatGPT 说得对），但也不等于「新交付物不许提交」。两者是两件事。</li></ul>
+<h3 id="sec-4">0.2 一处需要同步给 ChatGPT 的事实更正：安全整改的相当一部分被架构变更本身消化了</h3>
+<p>第 4 轮审计报告（<code>security-audit-report.md</code>）里最严重的两条 ——「任意服务器目录可被扫描」「伪造 <code>fullPath</code> 把服务器上的文件复制进 uploads」—— 都依附于<strong>旧的服务器目录扫描接口</strong>（<code>/api/scan-folder</code> 与旧 <code>apply-scan</code>）。本轮正式需求改为浏览器上传后，这两个接口按计划<strong>下线</strong>，风险链随之消失，<strong>不需要单独先做一轮「加白名单」的安全整改</strong>。</p>
+<p>这不是把已发现的问题当不存在，而是把整改分成三档（详见 4.6）：</p>
+<ul><li><strong>随链必做</strong>：本来就是新功能正确性的一部分（上传权限、文件名、大小、失败清理、批量上限），跟着 S1~S3 一起做，不另立前置任务。</li><li><strong>架构变更自动消除</strong>：旧扫描/导入接口下线。</li><li><strong>按风险排期</strong>：默认账号、<code>GET /api/projects</code> 完整 <code>data</code> 回传、导出 zip manifest 字段收敛、CORS 等与本次业务链无直接关系的存量项，排在部门多人试用前或之后，不阻塞原型。</li></ul>
+<h3 id="sec-5">0.3 一处对「共享下载」口径的保留</h3>
+<p>v1 已核实的结论继续有效：本项目的读侧定位是<strong>所有已登录用户可下载共享文件</strong>，因此 <code>GET /api/files/{id}</code> 等接口「登录即可读」是符合定位的，<strong>不能简单加一层角色判断</strong>，否则反而破坏共享。真正要收敛的是项目列表与导出包里回传的字段范围，属于「按风险排期」而非「开工阻断」。</p>
+<h3 id="sec-6">0.4 网页交付规则（继续沿用）</h3>
+<p>每次输出网页都<strong>升版另存</strong>，不覆盖已有 HTML，历史文件全部保留、是否删除由你决定。本轮新增 <code>phase1-plan-revised-v2.html</code> 与 <code>project-plan-review-v5.html</code>；网页带「一键复制全文」，便于把 Markdown 原文贴回 ChatGPT 继续讨论。</p>
+<hr>
+<h2 id="sec-7">一、正式需求（业务语言）</h2>
+<p><strong>一句话</strong>：用户在自己电脑上选一个资料目录 → 网页里预览并勾选要上传的文件 → 上传到服务器 → 部门其他同事能在系统里查到并下载。</p>
+<p><strong>明确否定</strong>：不要求任何人先把文件拷到服务器共享目录；不设「服务器目录白名单」这类前置条件；不要求先完成一轮全面安全整改才能开始。</p>
+<h3 id="sec-8">1.1 本期必须能跑通的完整业务链</h3>
+<pre><code>用户本机选目录 → 预览文件 → 选择上传 → 服务器保存 → 其他用户查找和下载</code></pre>
+<p>这条链是本期唯一的主线，后续所有技术决策都以「这条链是否可靠、好用、易维护」来判断。</p>
+<h3 id="sec-9">1.2 打通之后必须能做到的四件事（来自 GPT 第 6 轮，逐条按使用场景验收）</h3>
+<div class="tw"><table><thead><tr><th>场景</th><th>用户想做的事</th><th>验收时怎么判「做到了」</th></tr></thead><tbody><tr><td>A</td><td>查找某个项目的暖通施工图</td><td>选定项目、阶段，能列出该阶段全部文件并下载其中一个</td></tr><tr><td>B</td><td>查找其他项目中同类型的设计文件，供参考复用</td><td>不切换项目就能看到别的项目的同类文件，并能下载</td></tr><tr><td>C</td><td>根据系统、阶段、版本等条件筛选文件</td><td>能用条件组合缩小范围，结果条数与预期一致</td></tr><tr><td>D</td><td>将来迁移服务器上的文件存储位置时，原有文件记录和检索功能还能正常工作</td><td>搬迁演练后，历史文件仍可按原入口下载、检索结果不丢失</td></tr></tbody></table></div>
+<blockquote>这四件事对应 <code>MD_collect/Needs/需求说明书_V3_1.md:229-239</code> 的 <strong>FR-12</strong>。按 ChatGPT 的要求，<strong>验收只看这些操作能不能完成，不以「数据库是否新增了字段」作为通过标准</strong>。</blockquote>
+<h3 id="sec-10">1.3 本期明确不做</h3>
+<ul><li>不做 DWG 图框自动填充、设计说明模板填充（仍为占位能力，另立阶段）。</li><li>不做文件内容对比、在线预览 Office / CAD 图纸。</li><li>不新建一套分类字段体系或枚举字典表（见第三章）。</li><li>不改物理存储目录结构、不重建应用、不做整体数据迁移。</li><li>不实现 Tauri / 桌面客户端（只做评估与推荐，见第二章）。</li><li>不做全面权限体系重构、不做完整测试平台 / CI 建设。</li><li><strong>跨项目复用与追溯（FR-12）可以排在本期主链之后完成，但仍是正式必做需求，不从需求基线中删除</strong>。</li></ul>
+<hr>
+<h2 id="sec-11">二、选型评估：继续用网页，还是改用 Tauri 桌面客户端</h2>
+<blockquote>本节是任务单第 1 条明确要求的评估。<strong>结论先给：本期推荐继续用网页，Tauri 作为「触发式备选」认真保留但不迁移、不开发。</strong> 以下事实来自当前工作副本只读核查。</blockquote>
+<h3 id="sec-12">2.1 四个维度对比</h3>
+<div class="tw"><table><thead><tr><th>考虑因素</th><th>继续用网页（浏览器本机选目录）</th><th>改用 Tauri 桌面客户端</th></tr></thead><tbody><tr><td><strong>用户操作体验</strong></td><td>零安装，打开 <code>http://服务器IP:3001/</code> 就能用；浏览器里选目录 → 勾选 → 上传。局限：不能记住上次选的目录、不能后台常驻扫描；内网是纯 HTTP（非安全上下文），<code>showDirectoryPicker()</code> 大概率不可用，只能用 <code>webkitdirectory</code> 选目录</td><td>可记住常用目录、可增量扫描、本机文件操作更自然、大批量更稳；但每台电脑要装客户端、要处理升级</td></tr><tr><td><strong>开发复杂度</strong></td><td>复用现有 React 19 + FastAPI；已有的「浏览器真上传字节 → 落盘 → files 表 → 过程记录 → 下载」链路完整存在（<code>src/api/index.ts:63-75</code> → <code>server/app.py:2637-2809</code>）。要补的是目录选择、分批、进度、失败隔离</td><td>当前工作副本<strong>没有任何</strong> Tauri / Electron / Rust / <code>src-tauri</code> / <code>Cargo.toml</code> 骨架，需从零建客户端工程；<strong>服务端上传接口、授权、数据层的改造一项都省不掉</strong>（数据与权限都在服务端 SQLite/磁盘，<code>server/app.py:39-41,860-942,1399-1424</code>）</td></tr><tr><td><strong>维护成本</strong></td><td>单进程 FastAPI 同时托管前端 <code>dist/</code>（<code>server/app.py:204-205,3833-3858</code>）；更新只替换服务端一处，用户刷新浏览器即可；<code>DEPLOY_INTERNAL.md:5-11</code> 明确「不需要前端开发服务器，也不需要 Node.js」</td><td>额外增加：安装包生成与签名、每台客户机安装 / 升级分发、客户端与 <code>/api</code> 的版本兼容矩阵、自动更新通道。现有工程无 CI、无 <code>.sh/.ps1</code> 多平台脚本、<code>package.json:4</code> version 仍是 <code>0.0.0</code>，发布体系要从零建立</td></tr><tr><td><strong>安全性</strong></td><td>服务端仍是唯一信任边界；上传需校验登录 + 项目编辑权限（现有 <code>:2647,2664-2668</code> 已有）、文件名去路径（<code>:2339-2341</code> 已有）、大小（<code>:48</code> 100MB）；批量场景需补请求体总大小、单次文件数、类型白名单、幂等</td><td><strong>不会因为换成桌面客户端就省略服务端权限校验</strong>；反而多出客户端分发供应链、本地文件访问范围、客户端凭据存储等新的安全面</td></tr></tbody></table></div>
+<h3 id="sec-13">2.2 成本判断（一句话）</h3>
+<p>两条路线要改的<strong>服务端上传链路和校验是同一份</strong>；Tauri 只额外替换了「前端宿主 + 本机读取方式」，却要新增一整套当前完全不存在的安装包 / 签名 / 分发 / 升级体系。对「先让工具逐步可用」这个当前目标，网页方案的边际成本明显更低。</p>
+<h3 id="sec-14">2.3 推荐与理由</h3>
+<p><strong>本期选网页方案</strong>：以 <code>&lt;input type="file" webkitdirectory&gt;</code> + <code>webkitRelativePath</code> 拿到本机目录树与相对层级，勾选后分批上传到现有上传接口。理由三条：</p>
+<ol><li>零安装、零分发，符合内网部门共用的部署现状；</li><li>现有上传链路可复用，改造集中在前端组件与服务端批量校验；</li><li>能最快把 1.1 的业务链跑通，用真实反馈决定后续，而不是先押注一次客户端迁移。</li></ol>
+<p><strong>需要实测确认</strong>（静态代码无法定论）：目标 Chrome / Edge 在 <code>http://服务器IP:3001/</code> 下 <code>webkitdirectory</code> 是否正常、中文与长路径的 <code>webkitRelativePath</code> 是否完整、单次上千文件的浏览器内存表现。文档里没有指定浏览器版本，这三项要列入 S1 的实操验收。</p>
+<h3 id="sec-15">2.4 Tauri 的触发条件（满足两条以上再正式评估迁移）</h3>
+<ul><li>单次经常超过 100MB 或上千个文件，浏览器分批 / 内存表现不达标；</li><li>需要记住本机目录、做增量扫描或后台定时扫描；</li><li>需要断点续传、离线预处理、本地缓存等浏览器难以稳定提供的能力；</li><li>部门长期大量使用本机文件，客户端安装分发成本能被摊薄。</li></ul>
+<p><strong>当前决定</strong>：不迁移、不开发完整客户端、不引入任何桌面依赖；本结论在待决策项 Q7 里请你确认。</p>
+<hr>
+<h2 id="sec-16">三、文件归档与检索：先沿用现有分类，再按场景验收</h2>
+<blockquote>任务单第 2 条要求「能复用的就复用，缺失的再补充，避免同一项信息在不同位置重复维护」，并且<strong>不要求业务人员决定数据库结构</strong>。本节前半段给结论，后半段给验收动作；技术清单放在第七章（开发方案负责，可略过）。</blockquote>
+<h3 id="sec-17">3.1 只读核查结论：现有分类信息够不够</h3>
+<div class="tw"><table><thead><tr><th>判断</th><th>具体事实</th></tr></thead><tbody><tr><td><strong>能复用，不需重建</strong></td><td><code>files</code> 表<strong>已有</strong> <code>project_id</code> / <code>sub_project_id</code> / <code>stage</code> / <code>version</code> / <code>source</code>（<code>server/app.py:283-300</code>），全部 6 处上传写入都填了项目与子项归属；前端<strong>已有</strong>设计阶段、过程类别、细项、版本枚举（<code>src/constants.ts:3</code>、<code>src/process.ts:14-72</code>、<code>src/types.ts:36-40</code>）；单子项内已有「阶段 → 类别 → 细项 → 文件」树形浏览（<code>src/components/dashboard/structureTree.ts:39-74</code>）；单文件下载与按阶段打包下载已有（<code>server/app.py:3713,3747</code>）</td></tr><tr><td><strong>确实缺失，需要补</strong></td><td>① 全库<strong>没有任何「业务系统 / 专业系统」字段或枚举</strong> —— 这是 FR-12 里的「系统」，语义要先由业务定义；② <strong>没有文件级检索 / 筛选 / 跨项目查询接口与界面</strong>，所有 <code>files</code> 表 SQL 都带 <code>WHERE project_id = ?</code>；③ <code>kind</code> / <code>subtype</code> 只存在 <code>projects.data</code> 的 JSON 里，无法直接按条件查询；④ 版本口径混用（<code>A/B/C</code>、<code>V27</code>、目录名 <code>A版/V1/初版</code>、<code>AUTO/T</code>）；⑤ 枚举分散至少 5 处且 TS / Python 各一份，后端零校验；⑥ 存储根在读写两侧硬编码 <code>SERVER_DIR</code>，只改一个 <code>UPLOAD_ROOT</code> 常量会同时破坏新文件入库与历史下载</td></tr><tr><td><strong>重要边界</strong></td><td>「不重复建字段」在代码层做得到：<code>stage</code> / <code>version</code> 已在 <code>files</code> 表，<code>kind</code> / <code>subtype</code> 复用前端现有数组即可，不必新建字典表。真正要补的是<strong>一个查询能力 + 一个检索视图 + 「系统」维度的业务定义</strong>，不是一套新分类体系</td></tr></tbody></table></div>
+<h3 id="sec-18">3.2 本期做法（业务语言）</h3>
+<ul><li><strong>不新增分类字段体系</strong>，不要求你决定表结构；上传时把文件归到<strong>现有</strong>的项目 / 子项 / 设计阶段 / 过程类别 / 版本，沿用界面里已经在用的那些名称。</li><li><strong>原始目录名</strong>（<code>A版</code>、<code>V1</code>、<code>初版</code>）只作为来源标签保留，不直接当系统版本号；系统版本继续沿用它一直在用的 A / B / C 口径。</li><li><strong>「系统」这一维度先不定字段名</strong>：需要你先回答「系统」指的是暖通 / 给排水 / 电气这类专业，还是通风 / 防排烟这类子系统（待决策 Q1）。定义清楚前，不擅自建模。</li><li><strong>跨项目复用与追溯（FR-12）保留在正式需求基线</strong>，排在主链打通之后实现，按 3.3 的场景验收，不以「加了字段」算完成。</li></ul>
+<h3 id="sec-19">3.3 四个场景的验收动作（FR-12 按场景验收）</h3>
+<div class="tw"><table><thead><tr><th>场景</th><th>用户操作</th><th>交付结果</th><th>通过标准</th></tr></thead><tbody><tr><td>A 查某项目施工图</td><td>选项目 → 选「施工图设计」→ 查看列表 → 下载</td><td>该阶段文件清单与可下载链接</td><td>能列出全部文件，下载得到的文件与上传原件一致（大小 / 名称）</td></tr><tr><td>B 跨项目查同类文件</td><td>不切换项目，按「同类型厂房 + 同类文件」查找</td><td>命中其他项目的同类文件列表</td><td>能列出至少 2 个项目的同类文件，且每条能下载</td></tr><tr><td>C 按条件筛选</td><td>组合系统 / 阶段 / 版本条件</td><td>筛选后的文件清单</td><td>结果条数与人工清点一致，无重复、无遗漏</td></tr><tr><td>D 存储位置可迁移</td><td>做一次搬迁演练（整体复制到新目录、按说明改配置）</td><td>历史文件仍可访问</td><td>演练后随机抽 5 个历史文件，仍能从原入口下载，检索结果条数不变</td></tr></tbody></table></div>
+<blockquote>场景 D 需要开发方案里补一件小事：现在读写两侧都写死了 <code>server/</code> 目录（<code>server/app.py:2503,3724,3807</code>），搬迁时要把根目录收敛为一个统一配置，而不是只改 <code>UPLOAD_ROOT</code>。这属于「确实缺失、需要补充」的技术项，不影响本期先打通业务链。</blockquote>
+<hr>
+<h2 id="sec-20">四、修订后的任务顺序（S0 ~ S4）</h2>
+<p><strong>总原则</strong>：每个阶段独立、范围明确、可以单独验收、有明确回滚点；每个阶段都带必要的自动化测试与一次真人实操验收（第五章）。<strong>不设「全面安全整改」「完整测试体系」这类前置门槛</strong>。</p>
+<h3 id="sec-21">4.0 总览</h3>
+<div class="tw"><table><thead><tr><th>阶段</th><th>功能目标（业务语言）</th><th>用户操作</th><th>交付结果</th><th>单独验收方式</th><th>回滚点</th></tr></thead><tbody><tr><td><strong>S0</strong></td><td>把现状保存好，出问题时能恢复，并说清程序怎么启动</td><td>无（管理员操作）</td><td>一份可恢复的代码 / 数据快照 + 一页启动说明</td><td>快照能解压、能按说明启动到登录页</td><td>快照是副本，不改动工作区，天然可回退</td></tr><tr><td><strong>S1</strong></td><td>在本机选目录、预览文件、勾选要上传的文件</td><td>点「选择文件夹」→ 看清单 → 勾选 / 排除 / 改分类</td><td>网页里的目录预览与筛选界面</td><td>用一份真实资料目录（含中文、长路径、深层目录）走一遍，文件数与人工清点一致</td><td>新组件独立，旧扫描页保留开关，随时切回</td></tr><tr><td><strong>S2</strong></td><td>把勾选的文件真正上传到服务器</td><td>点「上传」→ 看进度 → 失败项可重试</td><td>服务器端能查到文件、能下载</td><td>上传后换一台电脑 / 换个账号登录，能查到并下载同一文件</td><td>复用现有上传接口，新增部分可单独停用</td></tr><tr><td><strong>S3</strong></td><td>其他人能查找和下载（含 3.3 的四个场景）</td><td>按条件找文件 → 下载 / 打包</td><td>文件查询与跨项目检索视图</td><td>四场景逐条验收（见 3.3）</td><td>新增视图与接口，不影响原有单子项浏览</td></tr><tr><td><strong>S4</strong></td><td>补齐常见误操作、上传失败等处理，达到可以给部门试用的程度</td><td>模拟断网、超大文件、重复上传、只读账号</td><td>错误处理清单 + 试用前检查记录</td><td>「多人试用前检查表」全通过</td><td>逐项小改动，各自可回退</td></tr></tbody></table></div>
+<h3 id="sec-22">4.1 S0 · 保存现状（不覆盖、不清理、不提交既有改动）</h3>
+<ul><li><strong>做什么</strong>：把当前工作区（含 46 项未提交改动、<code>server/uploads/</code>、<code>server/hvac.db</code> 等数据）<strong>原样复制</strong>成一份带日期的快照，并写一张「当前如何启动」的说明页。</li><li><strong>明确不做</strong>：不 <code>git add</code> 那 46 项、不清理、不覆盖、不重组目录、不为了「建立基线」而重写任何现有文件。</li><li><strong>与提交的关系</strong>：快照是副本，与 Git 提交无关；本轮新写的方案文档按你的长期规则独立提交（见 0.1）。</li><li><strong>完成标准</strong>：快照能解压、目录结构与工作区一致；按说明能启动到登录页；记录启动用的脚本名与端口（现有脚本 6 个 <code>.bat</code> + 2 个 <code>.vbs</code>，端口口径 3000 / 3001 / 3101 / 3111 并存，S0 需实测确认哪一个可用并写进说明）。</li><li><strong>配套验证</strong>：一次真实启动记录（截图 / 日志），不要求自动化测试。</li></ul>
+<h3 id="sec-23">4.2 S1 · 本机目录选择与预览</h3>
+<ul><li><strong>功能目标</strong>：不再让用户输入服务器路径，改成在自己电脑上选文件夹；网页列出目录里的文件与相对层级，能勾选、排除、批量改归类。</li><li><strong>用户操作</strong>：点「选择文件夹」→ 浏览器弹目录选择 → 网页显示文件树 → 勾选 / 取消 / 按阶段或类别批量归类 → 导入前看到汇总（共 N 个、选中 M 个、预计大小）。</li><li><strong>交付结果</strong>：新的目录选择组件 + 预览筛选界面；旧「输入服务器路径」的扫描页从菜单下线（接口一并下线，见 0.2）。</li><li><strong>单独验收</strong>：用一份真实资料目录（含中文名、长路径、4 层以上、隐藏文件、空目录、同名文件）走一遍，列出文件数与人工清点一致，无静默丢失；记录浏览器版本。</li><li><strong>配套测试</strong>：目录树构建、筛选、全选 / 反选、排除、汇总计数 —— vitest 单元测试（可用构造的 <code>FileList</code> 假数据，不需要真实浏览器）。</li></ul>
+<h3 id="sec-24">4.3 S2 · 上传到服务器</h3>
+<ul><li><strong>功能目标</strong>：把勾选的文件真正传到服务器，落到现有项目 / 子项 / 过程记录里，别人能看到。</li><li><strong>用户操作</strong>：选目标项目与子项 → 点上传 → 看逐文件进度与结果 → 失败项单独重试。</li><li><strong>交付结果</strong>：复用现有上传接口（<code>server/app.py:2637-2809</code>）与 <code>files</code> 表登记；补分批上传、进度显示、失败隔离、同批次重试不产生重复记录。</li><li><strong>单独验收</strong>：上传 3~5 个文件（含 1 个中文名）→ 换另一台电脑、换另一个账号登录 → 能查到并下载，内容与原件一致；中途断网重试，不产生重复文件、不留半截文件。</li><li><strong>配套测试</strong>：接口测试覆盖「未登录被拒」「无编辑权限被拒」「重名 / 重复提交」「单文件超限」「部分失败」；前端补进度与重试状态机用例。</li></ul>
+<h3 id="sec-25">4.4 S3 · 查询与下载（含跨项目检索）</h3>
+<ul><li><strong>功能目标</strong>：把 3.3 的四个场景做成可操作的界面。</li><li><strong>用户操作</strong>：按项目 / 阶段 / 类别 / 版本条件找文件 → 跨项目看同类文件 → 单文件下载或打包。</li><li><strong>交付结果</strong>：一个文件查询能力与一个检索视图；沿用现有分类名称，不新建分类体系。</li><li><strong>单独验收</strong>：按 3.3 表逐条走一遍；特别检查 B 场景确实能命中其他项目、C 场景结果条数与人工清点一致。</li><li><strong>配套测试</strong>：查询接口的条件组合、空结果、跨项目范围、字段范围；前端筛选控件用例。</li></ul>
+<h3 id="sec-26">4.5 S4 · 小步补齐与试用前检查</h3>
+<ul><li><strong>做什么</strong>：按实际试用反馈补常见误操作、上传失败、超大文件、重复导入的提示与处理；完成「多人试用前检查表」。</li><li><strong>底线（对应 ChatGPT 保留的那一条）</strong>：正式给部门多人使用前，至少确认<strong>普通用户不能通过错误操作破坏其他人的文件</strong>、<strong>上传与下载符合预期</strong>。</li><li><strong>完成标准</strong>：检查表全通过；已知遗留问题逐条写明状态（已修 / 按风险排期 / 接受），不留「不知道」。</li></ul>
+<h3 id="sec-27">4.6 安全项怎么「按优先级处理」，而不是变成前置门槛</h3>
+<div class="tw"><table><thead><tr><th>档位</th><th>包含什么</th><th>什么时候做</th><th>说明</th></tr></thead><tbody><tr><td><strong>随链必做</strong></td><td>登录与项目编辑权限、文件名去路径、单文件大小、请求体总大小与单次文件数上限、类型白名单、失败清理、幂等</td><td>S1~S3 内随功能一起</td><td>这些本来就是「功能正确性」的一部分，不另立安全任务；前三项现有代码已有</td></tr><tr><td><strong>架构变更自动消除</strong></td><td>任意服务器目录扫描、伪造 <code>fullPath</code> 复制服务器文件</td><td>S1 旧接口下线时</td><td>不需要单独做白名单整改</td></tr><tr><td><strong>多人试用前</strong></td><td>默认账号与首次改密、项目列表 / 导出包回传字段收敛、读侧按「所有已登录用户可下载」确认、只读账号不得写入</td><td>S4</td><td>对应 GPT 的底线；只做与「误操作破坏他人文件」直接相关的项</td></tr><tr><td><strong>按风险排期</strong></td><td>CORS 收紧、存储根解耦（场景 D）、枚举归一、版本口径统一、其余审计项</td><td>主链打通后按反馈安排</td><td>不阻塞原型，也不从清单里删除</td></tr></tbody></table></div>
+<p><strong>明确不扩大前置</strong>：不做 F1~F7 全套安全整改、不建完整测试平台与 CI、不做全面权限重构、不做物理存储迁移、不重写应用。</p>
+<h3 id="sec-28">4.7 任务独立性</h3>
+<p>S0 可独立完成；S1 用构造数据即可验收，不依赖 S2；S2 单独以「另一台电脑能下载」验收；S3 在 S2 产出的真实文件上验收；S4 是逐项小改动。任一阶段失败，只回滚该阶段新增部分，不触碰既有数据与 46 项改动。</p>
+<hr>
+<h2 id="sec-29">五、每阶段的配套测试（最小必要集）</h2>
+<blockquote>遵循 ChatGPT 的「每一项功能配套最基本的验证」，不建完整测试体系、不设覆盖率门槛、不要求 CI。现有基建：前端 vitest + jsdom，9 个测试文件 / 16 个用例；后端<strong>零 pytest</strong>、无 CI（只读核查结论）。</blockquote>
+<div class="tw"><table><thead><tr><th>层次</th><th>现状</th><th>本期最小补法</th><th>覆盖什么</th></tr></thead><tbody><tr><td>前端自动化</td><td>vitest 4 + jsdom 已有（<code>vite.config.ts:26-30</code>）</td><td>新增 1~2 个测试文件，用构造的 <code>FileList</code> 假数据</td><td>目录树构建、相对层级、筛选 / 全选 / 排除、汇总计数、上传进度与重试状态机</td></tr><tr><td>后端接口</td><td>无测试框架</td><td>引入一个最小接口测试（FastAPI <code>TestClient</code> + 一个测试文件，不加 CI、不加覆盖率）</td><td>未登录 / 无编辑权限、大小与数量上限、重复提交、部分失败、查询条件组合与跨项目范围</td></tr><tr><td>真人实操</td><td>现有「启动 + 手工点一遍」</td><td>每阶段一张操作清单，记录浏览器版本、目录样例、结果</td><td>中文长路径、深层目录、断网重试、超大文件、换账号下载、跨项目查找、搬迁演练</td></tr><tr><td>回归</td><td>现有 16 个用例跑一遍</td><td><code>npm test -- --run</code> + <code>npm run build</code></td><td>原有登录、项目、过程记录等核心功能无明显退化</td></tr></tbody></table></div>
+<h3 id="sec-30">5.1 最小可用原型的实操验收流程（一次完整走通）</h3>
+<div class="tw"><table><thead><tr><th>步</th><th>操作</th><th>期望结果</th></tr></thead><tbody><tr><td>1</td><td>按 S0 说明启动服务，账号 A 登录</td><td>能看到项目列表</td></tr><tr><td>2</td><td>账号 A 点「选择文件夹」，选一份含中文 / 长路径 / 4 层目录的真实资料</td><td>文件树完整、无静默丢失，汇总数与人工清点一致</td></tr><tr><td>3</td><td>勾选 3~5 个文件，指定项目 / 子项 / 阶段，点上传</td><td>逐文件进度可见，全部成功；失败项可单独重试</td></tr><tr><td>4</td><td>上传中途断网一次，恢复后重试</td><td>不产生重复记录、不残留半截文件</td></tr><tr><td>5</td><td>换电脑、用账号 B 登录</td><td>能看到刚上传的文件并下载，内容与原件一致</td></tr><tr><td>6</td><td>按阶段 / 类别筛选，再跨项目查同类文件</td><td>结果条数与人工清点一致，能命中其他项目</td></tr><tr><td>7</td><td>用只读账号尝试上传</td><td>被明确拒绝，且不会破坏他人文件</td></tr><tr><td>8</td><td>随机抽 5 个历史文件下载</td><td>全部可下载，说明新功能没有影响存量数据</td></tr><tr><td>9</td><td>搬迁演练（整体复制 + 按说明改配置）</td><td>历史文件仍从原入口可下载，检索结果条数不变</td></tr></tbody></table></div>
+<hr>
+<h2 id="sec-31">六、验收标准总表</h2>
+<div class="tw"><table><thead><tr><th>编号</th><th>阶段</th><th>通过条件</th></tr></thead><tbody><tr><td>V0-1</td><td>S0</td><td>快照可解压、与工作区一致；按说明能启动到登录页；记录可用脚本与端口</td></tr><tr><td>V1-1</td><td>S1</td><td>真实目录（含中文 / 长路径 / 深层 / 同名 / 空目录）文件数与人工清点一致，无静默丢失</td></tr><tr><td>V1-2</td><td>S1</td><td>勾选、排除、批量归类、导入前汇总均可操作且计数正确</td></tr><tr><td>V1-3</td><td>S1</td><td>目标浏览器实测 <code>webkitdirectory</code> 可用，记录浏览器版本</td></tr><tr><td>V2-1</td><td>S2</td><td>上传后换电脑 / 换账号能查到并下载，内容与原件一致</td></tr><tr><td>V2-2</td><td>S2</td><td>断网重试不产生重复记录、不留孤儿文件</td></tr><tr><td>V2-3</td><td>S2</td><td>未登录 / 无编辑权限被拒；单文件超限、数量超限有明确提示</td></tr><tr><td>V3-1</td><td>S3</td><td>场景 A / B / C / D 逐条通过（见 3.3）</td></tr><tr><td>V3-2</td><td>S3</td><td>沿用现有分类名称，未引入第二套分类口径</td></tr><tr><td>V4-1</td><td>S4</td><td>「多人试用前检查表」全通过；已知问题逐条有状态</td></tr><tr><td>V4-2</td><td>全程</td><td><code>npm test -- --run</code> 与 <code>npm run build</code> 通过，原有核心功能无明显退化</td></tr></tbody></table></div>
+<hr>
+<h2 id="sec-32">七、现有代码复用清单（开发方案负责，业务人员可略过）</h2>
+<div class="tw"><table><thead><tr><th>动作</th><th>对象</th><th>依据</th></tr></thead><tbody><tr><td><strong>保留</strong></td><td>现有上传接口与 <code>files</code> 表登记、过程记录 / 操作日志、单文件下载、按阶段打包下载</td><td><code>server/app.py:2637-2809,3713,3747</code>；<code>src/api/index.ts:63-75</code></td></tr><tr><td><strong>保留</strong></td><td>现有阶段 / 类别 / 细项 / 版本枚举与单子项树形浏览</td><td><code>src/constants.ts:3</code>、<code>src/process.ts:14-72</code>、<code>src/components/dashboard/structureTree.ts:39-74</code></td></tr><tr><td><strong>改造</strong></td><td>上传链路补分批 / 进度 / 失败隔离 / 批量上限 / 类型白名单 / 幂等</td><td><code>src/api/index.ts:63-75</code>（现为单个 FormData 一次 POST）、<code>server/app.py:48,2712-2726</code>（100MB 写盘后才检查）</td></tr><tr><td><strong>改造</strong></td><td>读侧字段收敛（项目列表与导出 manifest 不回传完整 <code>data</code>）</td><td><code>server/app.py:2193,3797</code> —— 属「多人试用前」档</td></tr><tr><td><strong>下线</strong></td><td><code>/api/scan-folder</code>、旧 <code>apply-scan</code>、服务器路径输入框与扫描菜单</td><td><code>server/app.py:2814,2831</code>、<code>src/components/scan/FolderScannerView.tsx:209</code></td></tr><tr><td><strong>新增</strong></td><td>浏览器目录选择组件、上传批次与状态、文件查询接口与跨项目检索视图、最小接口测试</td><td>本期主要工作量</td></tr></tbody></table></div>
+<blockquote><strong>不保留管理员专用的服务器目录扫描支线</strong>：正式需求是本机上传，保留旧支线会继续留下 0.2 里那条风险面，也增加两套逻辑的维护成本。此点在待决策 Q6 请你确认。</blockquote>
+<hr>
+<h2 id="sec-33">八、待决策事项（只列业务问题，不要求你决定数据库结构）</h2>
+<div class="tw"><table><thead><tr><th>#</th><th>需要你回答</th><th>默认取值（若不回答）</th><th>影响</th></tr></thead><tbody><tr><td>Q1</td><td>FR-12 里的「系统」指什么：暖通 / 给排水 / 电气这类<strong>专业</strong>，还是通风 / 防排烟这类<strong>子系统</strong>？</td><td>暂不建模，只沿用现有分类</td><td>决定场景 C 能否做「按系统筛选」</td></tr><tr><td>Q2</td><td>能否提供一份<strong>真实资料目录</strong>的层级样例（脱敏即可）？</td><td>用构造目录做验收，真实数据验收延后</td><td>决定 S1 分类映射是否贴合实际</td></tr><tr><td>Q3</td><td>单文件 100MB 上限够不够？暖通图纸常见大小是多少？</td><td>暂沿用 100MB，超限给明确提示</td><td>决定是否本期就要分片上传</td></tr><tr><td>Q4</td><td>部门试用前是否要求所有账号首次登录改密（含 Excel 批量导入的账号）？</td><td>试用前统一处理默认账号</td><td>影响 S4 检查表；现有导入写死 <code>must_change_password=0</code> 且按用户名覆盖，重复导入会重置已改密账号</td></tr><tr><td>Q5</td><td>是否确认本期<strong>不设任何资料集中前置条件</strong>（不要求先拷到共享盘）？</td><td>确认不设</td><td>直接决定 S1 界面形态</td></tr><tr><td>Q6</td><td>是否同意<strong>彻底下线</strong>服务器目录扫描入口，不保留管理员支线？</td><td>同意下线</td><td>决定 0.2 的风险消除是否成立</td></tr><tr><td>Q7</td><td>是否认可「本期继续用网页、Tauri 作为触发式备选」？</td><td>认可，暂不迁移</td><td>决定第二章结论是否冻结</td></tr><tr><td>Q8</td><td><strong>是否授权进入 S0 / S1 的代码实施？</strong></td><td><strong>不授权，本轮停在方案</strong></td><td>决定下一步是否动手改代码</td></tr><tr><td>Q9</td><td>是否授权整理工作区那 46 项既有未提交改动、建立可复现代码基线？</td><td>不授权，保持原样</td><td>影响后续版本可追溯性，不影响本轮</td></tr></tbody></table></div>
+<hr>
+<h2 id="sec-34">九、v1 → v2 差异对照</h2>
+<div class="tw"><table><thead><tr><th>项目</th><th>v1</th><th>v2</th><th>原因</th></tr></thead><tbody><tr><td>资料前置条件</td><td>「先集中到共享盘 + 配根目录白名单」</td><td><strong>删除</strong>，本期不设</td><td>ChatGPT 第 6 轮明确否定</td></tr><tr><td>S0 定位</td><td>安全修复与基线实测（Gate 0 阻断）</td><td>保存现状 + 启动说明</td><td>不把全面安全整改作为前置门槛</td></tr><tr><td>安全整改</td><td>F1~F7 排在功能开发前</td><td>三档：随链必做 / 试用前 / 按风险排期</td><td>大部分被旧接口下线自动消除</td></tr><tr><td>测试体系</td><td>先补测试基建再开发</td><td>每任务最小必要测试 + 真人实操</td><td>不建完整测试体系</td></tr><tr><td>归档</td><td>逻辑归档键 + 新增 <code>system</code> 候选</td><td>先沿用现有分类，按 4 场景验收；<code>system</code> 先由业务定义</td><td>避免重复建字段 / 枚举</td></tr><tr><td>选型</td><td>只写了网页方案</td><td>新增网页 vs Tauri 四维度评估与推荐</td><td>任务单第 1 条要求</td></tr><tr><td>任务表述</td><td>技术方案与代码行号为主</td><td>目标 / 操作 / 交付 / 单独验收 / 回滚</td><td>协作原则第 4 条</td></tr><tr><td>Git 口径</td><td>按用户澄清已修正</td><td>继续沿用，并澄清「不擅自提交代码」的适用范围</td><td>避免重演上一轮误解</td></tr></tbody></table></div>
+<p><strong>v1 中仍然有效、未推翻的结论</strong>：现有上传链路可复用、读侧「所有已登录用户可下载」符合共享定位、Excel 建账号密码已 bcrypt 哈希、内网纯 HTTP 下 <code>showDirectoryPicker()</code> 大概率不可用、FR-12 仍是正式必做需求、不改物理存储路径、不重建应用。</p>
+<hr>
+<h2 id="sec-35">十、执行边界与本轮变更核对</h2>
+<ul><li><strong>本轮只更新方案，未修改任何业务文件、代码、配置、数据库、<code>uploads/</code> 或账号数据</strong>；未启动服务、未发送接口请求、未读取 <code>.env</code> / <code>*.db</code> 实际内容、未输出任何口令或密钥值。</li><li><strong>只读核查范围</strong>：<code>src/</code>（41 个 ts/tsx、8882 行）、<code>server/app.py</code>、<code>server/folder_scanner.py</code>、<code>package.json</code>、<code>vite.config.ts</code>、<code>DEPLOY_INTERNAL.md</code>、<code>README.md</code>、<code>MD_collect/Needs/</code>、启动脚本清单、既有测试文件；历史副本（<code>20260427/</code>、<code>archive/</code>、<code>deploy-package-*</code>、<code>.conda-local/</code>）一律排除。</li><li><strong>新增文件</strong>：<code>phase1-plan-revised-v2.md</code>、<code>phase1-plan-revised-v2.html</code>、<code>project-plan-review-v5.html</code>（由 v4 复制后新增章节）、<code>round-qa-2026-11-16.md</code> 的 Round 6 记录。</li><li><strong>历史文件</strong>：<code>phase1-plan-revised-v1.md/.html</code>、<code>project-plan-review-v4.html</code>、<code>project-plan-review.html</code>、<code>project-status-review.html</code>、<code>security-audit-report.md/.html</code> 全部原样保留，未覆盖、未删除、未归档。</li><li><strong>Git</strong>：按你上一轮澄清的口径，交付物一个独立 commit、轮次日志一个独立 commit，均不 push、不改历史；工作区既有 <strong>46 项未提交改动</strong>未清理、未覆盖、未代为提交。若你希望本轮零 Git 变更，可以直接回退这两个 commit。</li><li><strong>状态</strong>：<strong>停在方案，等审核</strong>。Q8 默认为「不授权进入代码实施」，因此没有开始任何功能开发。</li></ul>
+<hr>
+<h2 id="sec-36">附：资料索引</h2>
+<div class="tw"><table><thead><tr><th>类别</th><th>文件 / 链接</th></tr></thead><tbody><tr><td>本轮依据</td><td>ChatGPT 第 6 轮分享 <code>https://chatgpt.com/s/t_6afaa7e429748191b6521cfb34405908</code></td></tr><tr><td>讨论链（完整历史）</td><td><code>project-plan-review-v5.html</code>（第 1~6 轮）、<code>project-plan-review-v4.html</code>、<code>project-plan-review.html</code>、<code>project-status-review.html</code></td></tr><tr><td>安全审计（第 4 轮）</td><td><code>security-audit-report.md</code> / <code>.html</code></td></tr><tr><td>上一版方案</td><td><code>phase1-plan-revised-v1.md</code> / <code>.html</code></td></tr><tr><td>需求基线</td><td><code>MD_collect/Needs/需求说明书_V3_1.md</code>（FR-12 在 <code>:229-239</code>）、<code>需求说明书_V3.md</code>、<code>PLAN.md</code></td></tr><tr><td>轮次日志</td><td><code>round-qa-2026-11-16.md</code>（Round 1~6）、<code>MD_collect/round/round-qa-*.md</code></td></tr><tr><td>部署与协作规则</td><td><code>DEPLOY_INTERNAL.md</code>、<code>README.md</code>、<code>AGENTS.md</code></td></tr></tbody></table></div>
+    </article>
+    <footer>
+      暖通设计管家 · 第一阶段实施方案（修订版 v2），生成于 2026-11-16。依据 ChatGPT 第 6 轮分享答复与当前工作副本的只读核查。
+      外部思路以原分享页为准，代码结论以仓库当前源码行号为准。历史文件一律保留，是否删除由用户决定。
+    </footer>
+  </main>
+</div>
+<textarea id="plan-raw" style="display:none"># 暖通设计管家 · 第一阶段实施方案（修订版 v2）
+
+&gt; **版本**：v2（2026-11-16） · **上一版**：`phase1-plan-revised-v1.md` / `.html` 原样保留
+&gt; **依据**：ChatGPT 第 6 轮答复（分享 `t_6afaa7e4…`）中的三条业务决策与四项协作原则，以及对当前工作副本的两组只读核查
+&gt; **性质**：**只更新方案，不修改业务代码**。全文优先用业务语言描述「实现什么、用户怎么操作、得到什么结果、怎么验收」；技术实现细节集中在标注「开发方案负责」的章节
+&gt; **历史记录**：讨论链另升版为 `project-plan-review-v5.html`，第 1~5 轮内容全部保留，新增第 6 轮；所有历史 HTML 不覆盖、不删除
+
+---
+
+## 〇、本轮结论：三条决策怎么落到方案上
+
+ChatGPT 这一轮把方向彻底纠正过来了：**目标是每个用户扫自己电脑上的目录、把选中的文件上传到服务器、供部门其他人查看下载**，之前把「扫服务器目录」当成需求，是把现有程序的行为误当成了目标。同时它把「先做全面安全整改 / 先建完整测试体系」从开工门槛降为随功能小步配套。这三条我全部接受，v1 里对应的内容按下面改。
+
+| # | 本轮业务决策 | v1 里的对应内容 | v2 怎么改 |
+|---|---|---|---|
+| 1 | 本机选目录 → 上传 → 其他人查看下载；**不得把「先集中到服务器目录」作为前置条件**；评估网页 vs Tauri 并给推荐，但暂不迁移 | v1 第 2 节把「资料先集中到共享盘 + 配根目录白名单」写成产品级边界 | **删除该前置条件**，本期不设任何资料集中要求；新增第二章选型评估与推荐 |
+| 2 | 优先沿用现有分类信息，避免重复建字段或枚举；按 4 个实际使用场景验收，FR-12 不只检查是否加了字段 | v1 第 5/9 节提出「逻辑归档键 + 单一枚举源 + `system` 为唯一新增候选」 | 改为「先沿用、后按场景验收」：本期**不新建分类字段体系**，只复用已有枚举并补一个查询能力；新增第三章逐场景验收表 |
+| 3 | 不要求先完成全面安全整改或完整测试体系；先保存现状确保可恢复，再打通最小可用原型；每任务配套必要测试与实操验收 | v1 把 S0 设为「安全修复与基线实测」Gate，测试章要求先补基建 | S0 改为「保存现状 + 说明如何启动」，安全与测试拆成**随链必做 / 多人试用前 / 按风险排期**三档；新增第五章最小测试集与实操验收流程 |
+| 4 | 优先讲功能目标、用户操作、交付结果、验收标准；任务独立可单独验收；不覆盖或清理现有改动、不擅自提交代码 | v1 以技术方案与代码行号为主 | 第四章按「目标 / 操作 / 交付 / 单独验收 / 回滚」重写；第八章待决策项只列业务问题，不要求你决定数据库结构 |
+
+### 0.1 一处需要同步给 ChatGPT 的规则澄清：Git 提交
+
+任务单第 4 条写「未经明确同意，不要……擅自提交代码」。这句话的适用范围需要说清，否则会重演上一轮的误解：
+
+- 你上一轮已经明确拍板：**「默认修改后还是要提交的」**。`AGENTS.md:18` 是每轮日志自动提交、`:21` 约束的是**日志 commit 不夹带无关文件**、`:22` 不自动 push；从来没有「代码不许提交」这条规则。
+- 前 4 轮只有日志 commit，是因为那些轮次是只读评审 / 审计、没有代码改动，不是规则禁止。
+- 本轮**没有修改任何业务代码**，所以「擅自提交代码」这件事没有发生。按你的长期口径，本轮新增的**方案文档默认独立提交**，日志单独一个 commit，不 push、不改历史；工作区既有的 **46 项未提交改动**仍然不清理、不覆盖、不代为提交 —— 这一条与任务单「不覆盖或清理现有改动」完全一致。
+- 结论：**代码基线 ≠ 立刻提交所有代码**（这点 ChatGPT 说得对），但也不等于「新交付物不许提交」。两者是两件事。
+
+### 0.2 一处需要同步给 ChatGPT 的事实更正：安全整改的相当一部分被架构变更本身消化了
+
+第 4 轮审计报告（`security-audit-report.md`）里最严重的两条 ——「任意服务器目录可被扫描」「伪造 `fullPath` 把服务器上的文件复制进 uploads」—— 都依附于**旧的服务器目录扫描接口**（`/api/scan-folder` 与旧 `apply-scan`）。本轮正式需求改为浏览器上传后，这两个接口按计划**下线**，风险链随之消失，**不需要单独先做一轮「加白名单」的安全整改**。
+
+这不是把已发现的问题当不存在，而是把整改分成三档（详见 4.6）：
+
+- **随链必做**：本来就是新功能正确性的一部分（上传权限、文件名、大小、失败清理、批量上限），跟着 S1~S3 一起做，不另立前置任务。
+- **架构变更自动消除**：旧扫描/导入接口下线。
+- **按风险排期**：默认账号、`GET /api/projects` 完整 `data` 回传、导出 zip manifest 字段收敛、CORS 等与本次业务链无直接关系的存量项，排在部门多人试用前或之后，不阻塞原型。
+
+### 0.3 一处对「共享下载」口径的保留
+
+v1 已核实的结论继续有效：本项目的读侧定位是**所有已登录用户可下载共享文件**，因此 `GET /api/files/{id}` 等接口「登录即可读」是符合定位的，**不能简单加一层角色判断**，否则反而破坏共享。真正要收敛的是项目列表与导出包里回传的字段范围，属于「按风险排期」而非「开工阻断」。
+
+### 0.4 网页交付规则（继续沿用）
+
+每次输出网页都**升版另存**，不覆盖已有 HTML，历史文件全部保留、是否删除由你决定。本轮新增 `phase1-plan-revised-v2.html` 与 `project-plan-review-v5.html`；网页带「一键复制全文」，便于把 Markdown 原文贴回 ChatGPT 继续讨论。
+
+---
+
+## 一、正式需求（业务语言）
+
+**一句话**：用户在自己电脑上选一个资料目录 → 网页里预览并勾选要上传的文件 → 上传到服务器 → 部门其他同事能在系统里查到并下载。
+
+**明确否定**：不要求任何人先把文件拷到服务器共享目录；不设「服务器目录白名单」这类前置条件；不要求先完成一轮全面安全整改才能开始。
+
+### 1.1 本期必须能跑通的完整业务链
+
+```
+用户本机选目录 → 预览文件 → 选择上传 → 服务器保存 → 其他用户查找和下载
+```
+
+这条链是本期唯一的主线，后续所有技术决策都以「这条链是否可靠、好用、易维护」来判断。
+
+### 1.2 打通之后必须能做到的四件事（来自 GPT 第 6 轮，逐条按使用场景验收）
+
+| 场景 | 用户想做的事 | 验收时怎么判「做到了」 |
+|---|---|---|
+| A | 查找某个项目的暖通施工图 | 选定项目、阶段，能列出该阶段全部文件并下载其中一个 |
+| B | 查找其他项目中同类型的设计文件，供参考复用 | 不切换项目就能看到别的项目的同类文件，并能下载 |
+| C | 根据系统、阶段、版本等条件筛选文件 | 能用条件组合缩小范围，结果条数与预期一致 |
+| D | 将来迁移服务器上的文件存储位置时，原有文件记录和检索功能还能正常工作 | 搬迁演练后，历史文件仍可按原入口下载、检索结果不丢失 |
+
+&gt; 这四件事对应 `MD_collect/Needs/需求说明书_V3_1.md:229-239` 的 **FR-12**。按 ChatGPT 的要求，**验收只看这些操作能不能完成，不以「数据库是否新增了字段」作为通过标准**。
+
+### 1.3 本期明确不做
+
+- 不做 DWG 图框自动填充、设计说明模板填充（仍为占位能力，另立阶段）。
+- 不做文件内容对比、在线预览 Office / CAD 图纸。
+- 不新建一套分类字段体系或枚举字典表（见第三章）。
+- 不改物理存储目录结构、不重建应用、不做整体数据迁移。
+- 不实现 Tauri / 桌面客户端（只做评估与推荐，见第二章）。
+- 不做全面权限体系重构、不做完整测试平台 / CI 建设。
+- **跨项目复用与追溯（FR-12）可以排在本期主链之后完成，但仍是正式必做需求，不从需求基线中删除**。
+
+---
+
+## 二、选型评估：继续用网页，还是改用 Tauri 桌面客户端
+
+&gt; 本节是任务单第 1 条明确要求的评估。**结论先给：本期推荐继续用网页，Tauri 作为「触发式备选」认真保留但不迁移、不开发。** 以下事实来自当前工作副本只读核查。
+
+### 2.1 四个维度对比
+
+| 考虑因素 | 继续用网页（浏览器本机选目录） | 改用 Tauri 桌面客户端 |
+|---|---|---|
+| **用户操作体验** | 零安装，打开 `http://服务器IP:3001/` 就能用；浏览器里选目录 → 勾选 → 上传。局限：不能记住上次选的目录、不能后台常驻扫描；内网是纯 HTTP（非安全上下文），`showDirectoryPicker()` 大概率不可用，只能用 `webkitdirectory` 选目录 | 可记住常用目录、可增量扫描、本机文件操作更自然、大批量更稳；但每台电脑要装客户端、要处理升级 |
+| **开发复杂度** | 复用现有 React 19 + FastAPI；已有的「浏览器真上传字节 → 落盘 → files 表 → 过程记录 → 下载」链路完整存在（`src/api/index.ts:63-75` → `server/app.py:2637-2809`）。要补的是目录选择、分批、进度、失败隔离 | 当前工作副本**没有任何** Tauri / Electron / Rust / `src-tauri` / `Cargo.toml` 骨架，需从零建客户端工程；**服务端上传接口、授权、数据层的改造一项都省不掉**（数据与权限都在服务端 SQLite/磁盘，`server/app.py:39-41,860-942,1399-1424`） |
+| **维护成本** | 单进程 FastAPI 同时托管前端 `dist/`（`server/app.py:204-205,3833-3858`）；更新只替换服务端一处，用户刷新浏览器即可；`DEPLOY_INTERNAL.md:5-11` 明确「不需要前端开发服务器，也不需要 Node.js」 | 额外增加：安装包生成与签名、每台客户机安装 / 升级分发、客户端与 `/api` 的版本兼容矩阵、自动更新通道。现有工程无 CI、无 `.sh/.ps1` 多平台脚本、`package.json:4` version 仍是 `0.0.0`，发布体系要从零建立 |
+| **安全性** | 服务端仍是唯一信任边界；上传需校验登录 + 项目编辑权限（现有 `:2647,2664-2668` 已有）、文件名去路径（`:2339-2341` 已有）、大小（`:48` 100MB）；批量场景需补请求体总大小、单次文件数、类型白名单、幂等 | **不会因为换成桌面客户端就省略服务端权限校验**；反而多出客户端分发供应链、本地文件访问范围、客户端凭据存储等新的安全面 |
+
+### 2.2 成本判断（一句话）
+
+两条路线要改的**服务端上传链路和校验是同一份**；Tauri 只额外替换了「前端宿主 + 本机读取方式」，却要新增一整套当前完全不存在的安装包 / 签名 / 分发 / 升级体系。对「先让工具逐步可用」这个当前目标，网页方案的边际成本明显更低。
+
+### 2.3 推荐与理由
+
+**本期选网页方案**：以 `&lt;input type="file" webkitdirectory&gt;` + `webkitRelativePath` 拿到本机目录树与相对层级，勾选后分批上传到现有上传接口。理由三条：
+
+1. 零安装、零分发，符合内网部门共用的部署现状；
+2. 现有上传链路可复用，改造集中在前端组件与服务端批量校验；
+3. 能最快把 1.1 的业务链跑通，用真实反馈决定后续，而不是先押注一次客户端迁移。
+
+**需要实测确认**（静态代码无法定论）：目标 Chrome / Edge 在 `http://服务器IP:3001/` 下 `webkitdirectory` 是否正常、中文与长路径的 `webkitRelativePath` 是否完整、单次上千文件的浏览器内存表现。文档里没有指定浏览器版本，这三项要列入 S1 的实操验收。
+
+### 2.4 Tauri 的触发条件（满足两条以上再正式评估迁移）
+
+- 单次经常超过 100MB 或上千个文件，浏览器分批 / 内存表现不达标；
+- 需要记住本机目录、做增量扫描或后台定时扫描；
+- 需要断点续传、离线预处理、本地缓存等浏览器难以稳定提供的能力；
+- 部门长期大量使用本机文件，客户端安装分发成本能被摊薄。
+
+**当前决定**：不迁移、不开发完整客户端、不引入任何桌面依赖；本结论在待决策项 Q7 里请你确认。
+
+---
+
+## 三、文件归档与检索：先沿用现有分类，再按场景验收
+
+&gt; 任务单第 2 条要求「能复用的就复用，缺失的再补充，避免同一项信息在不同位置重复维护」，并且**不要求业务人员决定数据库结构**。本节前半段给结论，后半段给验收动作；技术清单放在第七章（开发方案负责，可略过）。
+
+### 3.1 只读核查结论：现有分类信息够不够
+
+| 判断 | 具体事实 |
+|---|---|
+| **能复用，不需重建** | `files` 表**已有** `project_id` / `sub_project_id` / `stage` / `version` / `source`（`server/app.py:283-300`），全部 6 处上传写入都填了项目与子项归属；前端**已有**设计阶段、过程类别、细项、版本枚举（`src/constants.ts:3`、`src/process.ts:14-72`、`src/types.ts:36-40`）；单子项内已有「阶段 → 类别 → 细项 → 文件」树形浏览（`src/components/dashboard/structureTree.ts:39-74`）；单文件下载与按阶段打包下载已有（`server/app.py:3713,3747`） |
+| **确实缺失，需要补** | ① 全库**没有任何「业务系统 / 专业系统」字段或枚举** —— 这是 FR-12 里的「系统」，语义要先由业务定义；② **没有文件级检索 / 筛选 / 跨项目查询接口与界面**，所有 `files` 表 SQL 都带 `WHERE project_id = ?`；③ `kind` / `subtype` 只存在 `projects.data` 的 JSON 里，无法直接按条件查询；④ 版本口径混用（`A/B/C`、`V27`、目录名 `A版/V1/初版`、`AUTO/T`）；⑤ 枚举分散至少 5 处且 TS / Python 各一份，后端零校验；⑥ 存储根在读写两侧硬编码 `SERVER_DIR`，只改一个 `UPLOAD_ROOT` 常量会同时破坏新文件入库与历史下载 |
+| **重要边界** | 「不重复建字段」在代码层做得到：`stage` / `version` 已在 `files` 表，`kind` / `subtype` 复用前端现有数组即可，不必新建字典表。真正要补的是**一个查询能力 + 一个检索视图 + 「系统」维度的业务定义**，不是一套新分类体系 |
+
+### 3.2 本期做法（业务语言）
+
+- **不新增分类字段体系**，不要求你决定表结构；上传时把文件归到**现有**的项目 / 子项 / 设计阶段 / 过程类别 / 版本，沿用界面里已经在用的那些名称。
+- **原始目录名**（`A版`、`V1`、`初版`）只作为来源标签保留，不直接当系统版本号；系统版本继续沿用它一直在用的 A / B / C 口径。
+- **「系统」这一维度先不定字段名**：需要你先回答「系统」指的是暖通 / 给排水 / 电气这类专业，还是通风 / 防排烟这类子系统（待决策 Q1）。定义清楚前，不擅自建模。
+- **跨项目复用与追溯（FR-12）保留在正式需求基线**，排在主链打通之后实现，按 3.3 的场景验收，不以「加了字段」算完成。
+
+### 3.3 四个场景的验收动作（FR-12 按场景验收）
+
+| 场景 | 用户操作 | 交付结果 | 通过标准 |
+|---|---|---|---|
+| A 查某项目施工图 | 选项目 → 选「施工图设计」→ 查看列表 → 下载 | 该阶段文件清单与可下载链接 | 能列出全部文件，下载得到的文件与上传原件一致（大小 / 名称） |
+| B 跨项目查同类文件 | 不切换项目，按「同类型厂房 + 同类文件」查找 | 命中其他项目的同类文件列表 | 能列出至少 2 个项目的同类文件，且每条能下载 |
+| C 按条件筛选 | 组合系统 / 阶段 / 版本条件 | 筛选后的文件清单 | 结果条数与人工清点一致，无重复、无遗漏 |
+| D 存储位置可迁移 | 做一次搬迁演练（整体复制到新目录、按说明改配置） | 历史文件仍可访问 | 演练后随机抽 5 个历史文件，仍能从原入口下载，检索结果条数不变 |
+
+&gt; 场景 D 需要开发方案里补一件小事：现在读写两侧都写死了 `server/` 目录（`server/app.py:2503,3724,3807`），搬迁时要把根目录收敛为一个统一配置，而不是只改 `UPLOAD_ROOT`。这属于「确实缺失、需要补充」的技术项，不影响本期先打通业务链。
+
+---
+
+## 四、修订后的任务顺序（S0 ~ S4）
+
+**总原则**：每个阶段独立、范围明确、可以单独验收、有明确回滚点；每个阶段都带必要的自动化测试与一次真人实操验收（第五章）。**不设「全面安全整改」「完整测试体系」这类前置门槛**。
+
+### 4.0 总览
+
+| 阶段 | 功能目标（业务语言） | 用户操作 | 交付结果 | 单独验收方式 | 回滚点 |
+|---|---|---|---|---|---|
+| **S0** | 把现状保存好，出问题时能恢复，并说清程序怎么启动 | 无（管理员操作） | 一份可恢复的代码 / 数据快照 + 一页启动说明 | 快照能解压、能按说明启动到登录页 | 快照是副本，不改动工作区，天然可回退 |
+| **S1** | 在本机选目录、预览文件、勾选要上传的文件 | 点「选择文件夹」→ 看清单 → 勾选 / 排除 / 改分类 | 网页里的目录预览与筛选界面 | 用一份真实资料目录（含中文、长路径、深层目录）走一遍，文件数与人工清点一致 | 新组件独立，旧扫描页保留开关，随时切回 |
+| **S2** | 把勾选的文件真正上传到服务器 | 点「上传」→ 看进度 → 失败项可重试 | 服务器端能查到文件、能下载 | 上传后换一台电脑 / 换个账号登录，能查到并下载同一文件 | 复用现有上传接口，新增部分可单独停用 |
+| **S3** | 其他人能查找和下载（含 3.3 的四个场景） | 按条件找文件 → 下载 / 打包 | 文件查询与跨项目检索视图 | 四场景逐条验收（见 3.3） | 新增视图与接口，不影响原有单子项浏览 |
+| **S4** | 补齐常见误操作、上传失败等处理，达到可以给部门试用的程度 | 模拟断网、超大文件、重复上传、只读账号 | 错误处理清单 + 试用前检查记录 | 「多人试用前检查表」全通过 | 逐项小改动，各自可回退 |
+
+### 4.1 S0 · 保存现状（不覆盖、不清理、不提交既有改动）
+
+- **做什么**：把当前工作区（含 46 项未提交改动、`server/uploads/`、`server/hvac.db` 等数据）**原样复制**成一份带日期的快照，并写一张「当前如何启动」的说明页。
+- **明确不做**：不 `git add` 那 46 项、不清理、不覆盖、不重组目录、不为了「建立基线」而重写任何现有文件。
+- **与提交的关系**：快照是副本，与 Git 提交无关；本轮新写的方案文档按你的长期规则独立提交（见 0.1）。
+- **完成标准**：快照能解压、目录结构与工作区一致；按说明能启动到登录页；记录启动用的脚本名与端口（现有脚本 6 个 `.bat` + 2 个 `.vbs`，端口口径 3000 / 3001 / 3101 / 3111 并存，S0 需实测确认哪一个可用并写进说明）。
+- **配套验证**：一次真实启动记录（截图 / 日志），不要求自动化测试。
+
+### 4.2 S1 · 本机目录选择与预览
+
+- **功能目标**：不再让用户输入服务器路径，改成在自己电脑上选文件夹；网页列出目录里的文件与相对层级，能勾选、排除、批量改归类。
+- **用户操作**：点「选择文件夹」→ 浏览器弹目录选择 → 网页显示文件树 → 勾选 / 取消 / 按阶段或类别批量归类 → 导入前看到汇总（共 N 个、选中 M 个、预计大小）。
+- **交付结果**：新的目录选择组件 + 预览筛选界面；旧「输入服务器路径」的扫描页从菜单下线（接口一并下线，见 0.2）。
+- **单独验收**：用一份真实资料目录（含中文名、长路径、4 层以上、隐藏文件、空目录、同名文件）走一遍，列出文件数与人工清点一致，无静默丢失；记录浏览器版本。
+- **配套测试**：目录树构建、筛选、全选 / 反选、排除、汇总计数 —— vitest 单元测试（可用构造的 `FileList` 假数据，不需要真实浏览器）。
+
+### 4.3 S2 · 上传到服务器
+
+- **功能目标**：把勾选的文件真正传到服务器，落到现有项目 / 子项 / 过程记录里，别人能看到。
+- **用户操作**：选目标项目与子项 → 点上传 → 看逐文件进度与结果 → 失败项单独重试。
+- **交付结果**：复用现有上传接口（`server/app.py:2637-2809`）与 `files` 表登记；补分批上传、进度显示、失败隔离、同批次重试不产生重复记录。
+- **单独验收**：上传 3~5 个文件（含 1 个中文名）→ 换另一台电脑、换另一个账号登录 → 能查到并下载，内容与原件一致；中途断网重试，不产生重复文件、不留半截文件。
+- **配套测试**：接口测试覆盖「未登录被拒」「无编辑权限被拒」「重名 / 重复提交」「单文件超限」「部分失败」；前端补进度与重试状态机用例。
+
+### 4.4 S3 · 查询与下载（含跨项目检索）
+
+- **功能目标**：把 3.3 的四个场景做成可操作的界面。
+- **用户操作**：按项目 / 阶段 / 类别 / 版本条件找文件 → 跨项目看同类文件 → 单文件下载或打包。
+- **交付结果**：一个文件查询能力与一个检索视图；沿用现有分类名称，不新建分类体系。
+- **单独验收**：按 3.3 表逐条走一遍；特别检查 B 场景确实能命中其他项目、C 场景结果条数与人工清点一致。
+- **配套测试**：查询接口的条件组合、空结果、跨项目范围、字段范围；前端筛选控件用例。
+
+### 4.5 S4 · 小步补齐与试用前检查
+
+- **做什么**：按实际试用反馈补常见误操作、上传失败、超大文件、重复导入的提示与处理；完成「多人试用前检查表」。
+- **底线（对应 ChatGPT 保留的那一条）**：正式给部门多人使用前，至少确认**普通用户不能通过错误操作破坏其他人的文件**、**上传与下载符合预期**。
+- **完成标准**：检查表全通过；已知遗留问题逐条写明状态（已修 / 按风险排期 / 接受），不留「不知道」。
+
+### 4.6 安全项怎么「按优先级处理」，而不是变成前置门槛
+
+| 档位 | 包含什么 | 什么时候做 | 说明 |
+|---|---|---|---|
+| **随链必做** | 登录与项目编辑权限、文件名去路径、单文件大小、请求体总大小与单次文件数上限、类型白名单、失败清理、幂等 | S1~S3 内随功能一起 | 这些本来就是「功能正确性」的一部分，不另立安全任务；前三项现有代码已有 |
+| **架构变更自动消除** | 任意服务器目录扫描、伪造 `fullPath` 复制服务器文件 | S1 旧接口下线时 | 不需要单独做白名单整改 |
+| **多人试用前** | 默认账号与首次改密、项目列表 / 导出包回传字段收敛、读侧按「所有已登录用户可下载」确认、只读账号不得写入 | S4 | 对应 GPT 的底线；只做与「误操作破坏他人文件」直接相关的项 |
+| **按风险排期** | CORS 收紧、存储根解耦（场景 D）、枚举归一、版本口径统一、其余审计项 | 主链打通后按反馈安排 | 不阻塞原型，也不从清单里删除 |
+
+**明确不扩大前置**：不做 F1~F7 全套安全整改、不建完整测试平台与 CI、不做全面权限重构、不做物理存储迁移、不重写应用。
+
+### 4.7 任务独立性
+
+S0 可独立完成；S1 用构造数据即可验收，不依赖 S2；S2 单独以「另一台电脑能下载」验收；S3 在 S2 产出的真实文件上验收；S4 是逐项小改动。任一阶段失败，只回滚该阶段新增部分，不触碰既有数据与 46 项改动。
+
+---
+
+## 五、每阶段的配套测试（最小必要集）
+
+&gt; 遵循 ChatGPT 的「每一项功能配套最基本的验证」，不建完整测试体系、不设覆盖率门槛、不要求 CI。现有基建：前端 vitest + jsdom，9 个测试文件 / 16 个用例；后端**零 pytest**、无 CI（只读核查结论）。
+
+| 层次 | 现状 | 本期最小补法 | 覆盖什么 |
+|---|---|---|---|
+| 前端自动化 | vitest 4 + jsdom 已有（`vite.config.ts:26-30`） | 新增 1~2 个测试文件，用构造的 `FileList` 假数据 | 目录树构建、相对层级、筛选 / 全选 / 排除、汇总计数、上传进度与重试状态机 |
+| 后端接口 | 无测试框架 | 引入一个最小接口测试（FastAPI `TestClient` + 一个测试文件，不加 CI、不加覆盖率） | 未登录 / 无编辑权限、大小与数量上限、重复提交、部分失败、查询条件组合与跨项目范围 |
+| 真人实操 | 现有「启动 + 手工点一遍」 | 每阶段一张操作清单，记录浏览器版本、目录样例、结果 | 中文长路径、深层目录、断网重试、超大文件、换账号下载、跨项目查找、搬迁演练 |
+| 回归 | 现有 16 个用例跑一遍 | `npm test -- --run` + `npm run build` | 原有登录、项目、过程记录等核心功能无明显退化 |
+
+### 5.1 最小可用原型的实操验收流程（一次完整走通）
+
+| 步 | 操作 | 期望结果 |
+|---|---|---|
+| 1 | 按 S0 说明启动服务，账号 A 登录 | 能看到项目列表 |
+| 2 | 账号 A 点「选择文件夹」，选一份含中文 / 长路径 / 4 层目录的真实资料 | 文件树完整、无静默丢失，汇总数与人工清点一致 |
+| 3 | 勾选 3~5 个文件，指定项目 / 子项 / 阶段，点上传 | 逐文件进度可见，全部成功；失败项可单独重试 |
+| 4 | 上传中途断网一次，恢复后重试 | 不产生重复记录、不残留半截文件 |
+| 5 | 换电脑、用账号 B 登录 | 能看到刚上传的文件并下载，内容与原件一致 |
+| 6 | 按阶段 / 类别筛选，再跨项目查同类文件 | 结果条数与人工清点一致，能命中其他项目 |
+| 7 | 用只读账号尝试上传 | 被明确拒绝，且不会破坏他人文件 |
+| 8 | 随机抽 5 个历史文件下载 | 全部可下载，说明新功能没有影响存量数据 |
+| 9 | 搬迁演练（整体复制 + 按说明改配置） | 历史文件仍从原入口可下载，检索结果条数不变 |
+
+---
+
+## 六、验收标准总表
+
+| 编号 | 阶段 | 通过条件 |
+|---|---|---|
+| V0-1 | S0 | 快照可解压、与工作区一致；按说明能启动到登录页；记录可用脚本与端口 |
+| V1-1 | S1 | 真实目录（含中文 / 长路径 / 深层 / 同名 / 空目录）文件数与人工清点一致，无静默丢失 |
+| V1-2 | S1 | 勾选、排除、批量归类、导入前汇总均可操作且计数正确 |
+| V1-3 | S1 | 目标浏览器实测 `webkitdirectory` 可用，记录浏览器版本 |
+| V2-1 | S2 | 上传后换电脑 / 换账号能查到并下载，内容与原件一致 |
+| V2-2 | S2 | 断网重试不产生重复记录、不留孤儿文件 |
+| V2-3 | S2 | 未登录 / 无编辑权限被拒；单文件超限、数量超限有明确提示 |
+| V3-1 | S3 | 场景 A / B / C / D 逐条通过（见 3.3） |
+| V3-2 | S3 | 沿用现有分类名称，未引入第二套分类口径 |
+| V4-1 | S4 | 「多人试用前检查表」全通过；已知问题逐条有状态 |
+| V4-2 | 全程 | `npm test -- --run` 与 `npm run build` 通过，原有核心功能无明显退化 |
+
+---
+
+## 七、现有代码复用清单（开发方案负责，业务人员可略过）
+
+| 动作 | 对象 | 依据 |
+|---|---|---|
+| **保留** | 现有上传接口与 `files` 表登记、过程记录 / 操作日志、单文件下载、按阶段打包下载 | `server/app.py:2637-2809,3713,3747`；`src/api/index.ts:63-75` |
+| **保留** | 现有阶段 / 类别 / 细项 / 版本枚举与单子项树形浏览 | `src/constants.ts:3`、`src/process.ts:14-72`、`src/components/dashboard/structureTree.ts:39-74` |
+| **改造** | 上传链路补分批 / 进度 / 失败隔离 / 批量上限 / 类型白名单 / 幂等 | `src/api/index.ts:63-75`（现为单个 FormData 一次 POST）、`server/app.py:48,2712-2726`（100MB 写盘后才检查） |
+| **改造** | 读侧字段收敛（项目列表与导出 manifest 不回传完整 `data`） | `server/app.py:2193,3797` —— 属「多人试用前」档 |
+| **下线** | `/api/scan-folder`、旧 `apply-scan`、服务器路径输入框与扫描菜单 | `server/app.py:2814,2831`、`src/components/scan/FolderScannerView.tsx:209` |
+| **新增** | 浏览器目录选择组件、上传批次与状态、文件查询接口与跨项目检索视图、最小接口测试 | 本期主要工作量 |
+
+&gt; **不保留管理员专用的服务器目录扫描支线**：正式需求是本机上传，保留旧支线会继续留下 0.2 里那条风险面，也增加两套逻辑的维护成本。此点在待决策 Q6 请你确认。
+
+---
+
+## 八、待决策事项（只列业务问题，不要求你决定数据库结构）
+
+| # | 需要你回答 | 默认取值（若不回答） | 影响 |
+|---|---|---|---|
+| Q1 | FR-12 里的「系统」指什么：暖通 / 给排水 / 电气这类**专业**，还是通风 / 防排烟这类**子系统**？ | 暂不建模，只沿用现有分类 | 决定场景 C 能否做「按系统筛选」 |
+| Q2 | 能否提供一份**真实资料目录**的层级样例（脱敏即可）？ | 用构造目录做验收，真实数据验收延后 | 决定 S1 分类映射是否贴合实际 |
+| Q3 | 单文件 100MB 上限够不够？暖通图纸常见大小是多少？ | 暂沿用 100MB，超限给明确提示 | 决定是否本期就要分片上传 |
+| Q4 | 部门试用前是否要求所有账号首次登录改密（含 Excel 批量导入的账号）？ | 试用前统一处理默认账号 | 影响 S4 检查表；现有导入写死 `must_change_password=0` 且按用户名覆盖，重复导入会重置已改密账号 |
+| Q5 | 是否确认本期**不设任何资料集中前置条件**（不要求先拷到共享盘）？ | 确认不设 | 直接决定 S1 界面形态 |
+| Q6 | 是否同意**彻底下线**服务器目录扫描入口，不保留管理员支线？ | 同意下线 | 决定 0.2 的风险消除是否成立 |
+| Q7 | 是否认可「本期继续用网页、Tauri 作为触发式备选」？ | 认可，暂不迁移 | 决定第二章结论是否冻结 |
+| Q8 | **是否授权进入 S0 / S1 的代码实施？** | **不授权，本轮停在方案** | 决定下一步是否动手改代码 |
+| Q9 | 是否授权整理工作区那 46 项既有未提交改动、建立可复现代码基线？ | 不授权，保持原样 | 影响后续版本可追溯性，不影响本轮 |
+
+---
+
+## 九、v1 → v2 差异对照
+
+| 项目 | v1 | v2 | 原因 |
+|---|---|---|---|
+| 资料前置条件 | 「先集中到共享盘 + 配根目录白名单」 | **删除**，本期不设 | ChatGPT 第 6 轮明确否定 |
+| S0 定位 | 安全修复与基线实测（Gate 0 阻断） | 保存现状 + 启动说明 | 不把全面安全整改作为前置门槛 |
+| 安全整改 | F1~F7 排在功能开发前 | 三档：随链必做 / 试用前 / 按风险排期 | 大部分被旧接口下线自动消除 |
+| 测试体系 | 先补测试基建再开发 | 每任务最小必要测试 + 真人实操 | 不建完整测试体系 |
+| 归档 | 逻辑归档键 + 新增 `system` 候选 | 先沿用现有分类，按 4 场景验收；`system` 先由业务定义 | 避免重复建字段 / 枚举 |
+| 选型 | 只写了网页方案 | 新增网页 vs Tauri 四维度评估与推荐 | 任务单第 1 条要求 |
+| 任务表述 | 技术方案与代码行号为主 | 目标 / 操作 / 交付 / 单独验收 / 回滚 | 协作原则第 4 条 |
+| Git 口径 | 按用户澄清已修正 | 继续沿用，并澄清「不擅自提交代码」的适用范围 | 避免重演上一轮误解 |
+
+**v1 中仍然有效、未推翻的结论**：现有上传链路可复用、读侧「所有已登录用户可下载」符合共享定位、Excel 建账号密码已 bcrypt 哈希、内网纯 HTTP 下 `showDirectoryPicker()` 大概率不可用、FR-12 仍是正式必做需求、不改物理存储路径、不重建应用。
+
+---
+
+## 十、执行边界与本轮变更核对
+
+- **本轮只更新方案，未修改任何业务文件、代码、配置、数据库、`uploads/` 或账号数据**；未启动服务、未发送接口请求、未读取 `.env` / `*.db` 实际内容、未输出任何口令或密钥值。
+- **只读核查范围**：`src/`（41 个 ts/tsx、8882 行）、`server/app.py`、`server/folder_scanner.py`、`package.json`、`vite.config.ts`、`DEPLOY_INTERNAL.md`、`README.md`、`MD_collect/Needs/`、启动脚本清单、既有测试文件；历史副本（`20260427/`、`archive/`、`deploy-package-*`、`.conda-local/`）一律排除。
+- **新增文件**：`phase1-plan-revised-v2.md`、`phase1-plan-revised-v2.html`、`project-plan-review-v5.html`（由 v4 复制后新增章节）、`round-qa-2026-11-16.md` 的 Round 6 记录。
+- **历史文件**：`phase1-plan-revised-v1.md/.html`、`project-plan-review-v4.html`、`project-plan-review.html`、`project-status-review.html`、`security-audit-report.md/.html` 全部原样保留，未覆盖、未删除、未归档。
+- **Git**：按你上一轮澄清的口径，交付物一个独立 commit、轮次日志一个独立 commit，均不 push、不改历史；工作区既有 **46 项未提交改动**未清理、未覆盖、未代为提交。若你希望本轮零 Git 变更，可以直接回退这两个 commit。
+- **状态**：**停在方案，等审核**。Q8 默认为「不授权进入代码实施」，因此没有开始任何功能开发。
+
+---
+
+## 附：资料索引
+
+| 类别 | 文件 / 链接 |
+|---|---|
+| 本轮依据 | ChatGPT 第 6 轮分享 `https://chatgpt.com/s/t_6afaa7e429748191b6521cfb34405908` |
+| 讨论链（完整历史） | `project-plan-review-v5.html`（第 1~6 轮）、`project-plan-review-v4.html`、`project-plan-review.html`、`project-status-review.html` |
+| 安全审计（第 4 轮） | `security-audit-report.md` / `.html` |
+| 上一版方案 | `phase1-plan-revised-v1.md` / `.html` |
+| 需求基线 | `MD_collect/Needs/需求说明书_V3_1.md`（FR-12 在 `:229-239`）、`需求说明书_V3.md`、`PLAN.md` |
+| 轮次日志 | `round-qa-2026-11-16.md`（Round 1~6）、`MD_collect/round/round-qa-*.md` |
+| 部署与协作规则 | `DEPLOY_INTERNAL.md`、`README.md`、`AGENTS.md` |
+</textarea>
+<script>
+(function(){
+  var b=document.getElementById('copy-plan'), t=document.getElementById('plan-raw'), n=document.getElementById('copy-note');
+  if(!b||!t)return;
+  b.addEventListener('click',function(){
+    var text=t.value;
+    function done(){ n.textContent='已复制 '+text.length+' 字符，可直接贴回 ChatGPT。'; b.textContent='✅ 已复制全文';
+      setTimeout(function(){b.textContent='📋 复制方案全文';},2200); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, fallback);
+    }else{ fallback(); }
+    function fallback(){
+      t.style.display='block'; t.select();
+      try{ document.execCommand('copy'); done(); }catch(e){ n.textContent='复制失败，请手动选中原文。'; }
+      t.style.display='none';
+    }
+  });
+})();
+</script>
+</body>
+</html>

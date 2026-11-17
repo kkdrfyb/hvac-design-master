@@ -1,0 +1,38 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 本机运行环境与工作区数据（不入库）
+.conda-local/
+.workbuddy/
+archive/
+
+# 密钥与 SQLite 数据库（首次启动自动生成，不入库）
+server/.env
+server/*.db
+server/uploads
+
+node_modules
+server/uploads
+dist
+dist-ssr
+*.local
+__pycache__/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+node_modules
+.qoder

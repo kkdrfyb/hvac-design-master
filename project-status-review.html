@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暖通设计管家｜项目现状梳理</title>
+<style>
+  :root{
+    --bg:#f6f8fb; --surface:#ffffff; --surface-2:#fbfcfe;
+    --line:#e2e8f0; --line-strong:#cbd5e1;
+    --text:#1b2838; --text-2:#3d4e60; --muted:#69798b;
+    --brand:#1c5fa8; --brand-2:#2f7fd1; --brand-soft:#eaf3fd;
+    --ok:#127a58; --ok-soft:#e7f5ef;
+    --warn:#a86808; --warn-soft:#fdf3e2;
+    --danger:#b53b34; --danger-soft:#fbeceb;
+    --purple:#6550ac; --purple-soft:#f0ecfb;
+    --radius:12px;
+    --shadow:0 1px 2px rgba(20,40,70,.04),0 8px 24px rgba(20,40,70,.045);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI",system-ui,-apple-system,sans-serif;
+    font-size:15px; line-height:1.75; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--brand); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code, .mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace; font-size:.9em}
+  .wrap{max-width:1200px; margin:0 auto; padding:0 28px}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    background:linear-gradient(135deg,#ffffff 0%,#f2f7fd 55%,#eaf2fb 100%);
+    border-bottom:1px solid var(--line);
+  }
+  .hero-inner{padding:44px 0 34px}
+  .kicker{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; padding:3px 11px;
+    border:1px solid var(--line-strong); border-radius:999px;
+    background:rgba(255,255,255,.75); color:var(--text-2); font-size:12px; letter-spacing:.02em;
+  }
+  .chip.brand{border-color:#bcd6f2; background:var(--brand-soft); color:var(--brand)}
+  h1{font-size:34px; line-height:1.3; margin:0 0 10px; letter-spacing:-.02em}
+  h1 small{display:block; font-size:14px; font-weight:400; color:var(--muted); letter-spacing:.06em; margin-top:6px}
+  .lede{font-size:16px; color:var(--text-2); max-width:840px; margin:0 0 20px}
+  .notice{
+    display:flex; gap:10px; align-items:flex-start;
+    background:#fff; border:1px solid #cfe0f3; border-left:3px solid var(--brand);
+    border-radius:8px; padding:12px 16px; font-size:13.5px; color:var(--text-2); max-width:840px;
+  }
+  .notice b{color:var(--brand)}
+  .meta{display:flex; gap:18px; flex-wrap:wrap; margin-top:20px; font-size:12.5px; color:var(--muted)}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid; grid-template-columns:212px minmax(0,1fr); gap:34px; padding:32px 0 64px}
+  .toc{position:sticky; top:24px; align-self:start; font-size:13.5px}
+  .toc-title{font-size:11px; letter-spacing:.14em; color:var(--muted); font-weight:700; margin:0 0 10px 4px}
+  .toc a{
+    display:block; padding:7px 12px; color:var(--text-2); border-left:2px solid transparent; border-radius:0 6px 6px 0;
+  }
+  .toc a:hover{background:var(--brand-soft); text-decoration:none}
+  .toc a.active{border-left-color:var(--brand); background:var(--brand-soft); color:var(--brand); font-weight:600}
+  .toc-foot{margin-top:18px; padding:12px 4px 0; border-top:1px solid var(--line); font-size:12px; color:var(--muted)}
+  .btn{
+    display:inline-flex; align-items:center; gap:6px; padding:7px 13px; font-size:12.5px;
+    border:1px solid var(--line-strong); background:#fff; color:var(--text-2);
+    border-radius:7px; cursor:pointer; font-family:inherit;
+  }
+  .btn:hover{background:var(--brand-soft); border-color:#bcd6f2; color:var(--brand)}
+
+  section{margin-bottom:44px; scroll-margin-top:20px}
+  .sec-head{display:flex; align-items:baseline; gap:12px; margin:0 0 6px}
+  .sec-num{
+    font-family:"SFMono-Regular",Consolas,monospace; font-size:12px; font-weight:700;
+    color:var(--brand); background:var(--brand-soft); border-radius:6px; padding:3px 8px; letter-spacing:.04em;
+  }
+  h2{font-size:22px; margin:0; letter-spacing:-.01em}
+  .sec-sub{color:var(--muted); font-size:13.5px; margin:0 0 20px; padding-left:0}
+  h3{font-size:16px; margin:26px 0 10px}
+  h4{font-size:14px; margin:0 0 6px}
+  p{margin:0 0 12px}
+  ul{margin:0 0 12px; padding-left:20px}
+  li{margin:4px 0}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px 22px}
+  .grid{display:grid; gap:14px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .card.tint{background:var(--surface-2)}
+  .stat{text-align:left}
+  .stat .n{font-size:26px; font-weight:700; color:var(--brand); line-height:1.2; letter-spacing:-.02em}
+  .stat .l{font-size:12.5px; color:var(--muted); margin-top:4px}
+  .stat .d{font-size:12px; color:var(--muted); margin-top:7px; line-height:1.5}
+
+  .tag{
+    display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:5px;
+    white-space:nowrap; line-height:1.6;
+  }
+  .t-ok{background:var(--ok-soft); color:var(--ok)}
+  .t-warn{background:var(--warn-soft); color:var(--warn)}
+  .t-danger{background:var(--danger-soft); color:var(--danger)}
+  .t-info{background:var(--brand-soft); color:var(--brand)}
+  .t-purple{background:var(--purple-soft); color:var(--purple)}
+  .t-grey{background:#eef1f5; color:var(--muted)}
+
+  .callout{
+    border-left:3px solid var(--warn); background:var(--warn-soft);
+    border-radius:0 8px 8px 0; padding:13px 16px; margin:14px 0; font-size:13.5px; color:#6a4a12;
+  }
+  .callout.info{border-left-color:var(--brand); background:var(--brand-soft); color:#1a4675}
+  .callout.danger{border-left-color:var(--danger); background:var(--danger-soft); color:#7e2c27}
+  .callout b{font-weight:700}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px; background:#fff; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line)}
+  th,td{padding:10px 13px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top}
+  th{background:#f2f6fb; color:var(--text-2); font-size:12.5px; font-weight:700; letter-spacing:.02em}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#fafcff}
+  td .sub{display:block; color:var(--muted); font-size:12px; margin-top:3px; line-height:1.55}
+  .table-wrap{overflow-x:auto}
+
+  /* ---------- Timeline ---------- */
+  .timeline{position:relative; margin:4px 0 0; padding-left:22px}
+  .timeline:before{content:""; position:absolute; left:6px; top:6px; bottom:6px; width:2px; background:var(--line-strong)}
+  .tl{position:relative; margin-bottom:16px}
+  .tl:before{content:""; position:absolute; left:-20px; top:7px; width:10px; height:10px; border-radius:50%; background:#fff; border:2px solid var(--brand-2)}
+  .tl.hot:before{border-color:var(--warn); background:var(--warn-soft)}
+  .tl-date{font-family:"SFMono-Regular",Consolas,monospace; font-size:12px; color:var(--brand); font-weight:700}
+  .tl-title{font-weight:600; font-size:14px; margin:1px 0 2px}
+  .tl-desc{font-size:13px; color:var(--text-2); line-height:1.6}
+
+  /* ---------- Problem list ---------- */
+  .filters{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 16px}
+  .filters .btn.active{background:var(--brand); border-color:var(--brand); color:#fff}
+  .issue{
+    background:#fff; border:1px solid var(--line); border-left:3px solid var(--line-strong);
+    border-radius:8px; padding:15px 18px; margin-bottom:11px;
+  }
+  .issue[data-cat="product"]{border-left-color:var(--purple)}
+  .issue[data-cat="eng"]{border-left-color:var(--warn)}
+  .issue[data-cat="delivery"]{border-left-color:var(--danger)}
+  .issue-head{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:6px}
+  .issue-head .idx{font-family:monospace; font-size:12px; color:var(--muted)}
+  .issue p{font-size:13.5px; color:var(--text-2); margin:0 0 8px}
+  .evidence{font-size:12.5px; color:var(--muted); background:var(--surface-2); border:1px dashed var(--line-strong); border-radius:6px; padding:8px 11px; line-height:1.6}
+  .evidence b{color:var(--text-2); font-weight:600}
+  details{margin-top:8px}
+  summary{cursor:pointer; font-size:12.5px; color:var(--brand); outline:none; list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary:before{content:"▸ "; display:inline-block}
+  details[open] summary:before{content:"▾ "}
+  details .body{padding:9px 0 0; font-size:13px; color:var(--text-2)}
+
+  /* ---------- Roadmap ---------- */
+  .phase{display:grid; grid-template-columns:92px minmax(0,1fr); gap:16px; margin-bottom:14px}
+  .phase-label{padding-top:14px}
+  .todo{list-style:none; padding:0; margin:0}
+  .todo li{display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1px dashed var(--line); font-size:13.5px; color:var(--text-2)}
+  .todo li:last-child{border-bottom:none}
+  .todo input{margin-top:5px; width:15px; height:15px; accent-color:var(--brand); flex:none; cursor:pointer}
+  .todo label{cursor:pointer}
+  .todo input:checked + label{text-decoration:line-through; color:var(--muted)}
+  .progress-note{font-size:12px; color:var(--muted); margin-top:10px}
+
+  .filelist{font-size:13px; columns:2; column-gap:28px; padding-left:18px; color:var(--text-2)}
+  .filelist li{break-inside:avoid; margin:5px 0}
+  footer{border-top:1px solid var(--line); padding:22px 0 40px; color:var(--muted); font-size:12.5px}
+
+  @media(max-width:980px){
+    .layout{grid-template-columns:1fr; gap:20px}
+    .toc{position:static; display:flex; gap:4px; flex-wrap:wrap; padding-bottom:12px; border-bottom:1px solid var(--line)}
+    .toc-title,.toc-foot{display:none}
+    .toc a{border-left:none; border-bottom:2px solid transparent; padding:5px 10px}
+    .toc a.active{border-left:none; border-bottom-color:var(--brand)}
+    .g4{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .g3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media(max-width:640px){
+    .wrap{padding:0 16px}
+    h1{font-size:26px}
+    .g2,.g3,.g4{grid-template-columns:1fr}
+    .filelist{columns:1}
+    .phase{grid-template-columns:1fr; gap:4px}
+  }
+  @media print{
+    body{background:#fff}
+    .toc,.filters,.btn,.hero .meta{display:none}
+    .layout{display:block; padding-top:20px}
+    section{page-break-inside:avoid; margin-bottom:28px}
+    .card,.issue,table{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">
+      <span class="chip brand">项目梳理稿</span>
+      <span class="chip">暖通专业 · 设计过程管理</span>
+      <span class="chip">本地 / 局域网 Web 工具</span>
+      <span class="chip">整理于 2026-11-16</span>
+    </div>
+    <h1>暖通设计管家 · 项目现状梳理
+      <small>HVAC Design Master — 需求 / 进展 / 问题 / 下一步</small>
+    </h1>
+    <p class="lede">
+      这是一个面向暖通专业设计过程的内部工具：把「项目—子项—设计阶段—设计过程分类—文件版本」串成一条可追溯的线，
+      并用模板把重复的设计说明与提资成果标准化。目前已能跑通登录、权限、过程记录、文件上传与导出、内网部署，
+      但最核心的模板化产出与文件归档能力仍停留在占位阶段。
+    </p>
+    <div class="notice">
+      <span>ℹ️</span>
+      <div><b>本页只做梳理，未改动任何现有业务内容。</b> 全部结论来自仓库内的需求文档、开发日志、测试报告与当前源码；
+      新增的只有这一个独立的 HTML 说明页。页面中的「依据」均可按文件名回查原文。</div>
+    </div>
+    <div class="meta">
+      <span>技术栈：React 19 + TypeScript + Vite / FastAPI + SQLite</span>
+      <span>资料范围：README、DEPLOY_INTERNAL、MD_collect/、round-qa-*、src/、server/</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap layout">
+  <nav class="toc" id="toc">
+    <div class="toc-title">目录</div>
+    <a href="#overview">00 · 一眼看懂</a>
+    <a href="#needs">01 · 项目需求</a>
+    <a href="#progress">02 · 目前进展</a>
+    <a href="#issues">03 · 存在的问题</a>
+    <a href="#roadmap">04 · 继续完善建议</a>
+    <a href="#sources">05 · 资料索引</a>
+    <div class="toc-foot">
+      <button class="btn" onclick="window.print()">🖨 打印 / 存为 PDF</button>
+    </div>
+  </nav>
+
+  <main>
+
+  <!-- ============ 00 ============ -->
+  <section id="overview">
+    <div class="sec-head"><span class="sec-num">00</span><h2>一眼看懂</h2></div>
+    <p class="sec-sub">用几个可核对的数字，先给项目定个位。</p>
+    <div class="grid g4">
+      <div class="card stat"><div class="n">6 版</div><div class="l">需求文档版本</div><div class="d">基础版 v0 → V1 / V1.1 / V1.2 → V2 → V3 → V3.1</div></div>
+      <div class="card stat"><div class="n">14 份</div><div class="l">开发轮次日志</div><div class="d">2026-02-14 ~ 2026-04-27，记录密集的迭代过程</div></div>
+      <div class="card stat"><div class="n">≈3,860 行</div><div class="l">后端主程序 app.py</div><div class="d">30+ 个 API 路由，前后端可单服务部署</div></div>
+      <div class="card stat"><div class="n">9 文件 / 16 用例</div><div class="l">最近一次记录的测试</div><div class="d">见 04-27 日志；正式报告仍停留在 02-23</div></div>
+    </div>
+
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card">
+        <h4><span class="tag t-ok">已经成型</span></h4>
+        <ul style="font-size:13.5px; color:var(--text-2); margin-bottom:0">
+          <li>项目 / 子项 / 三阶段 / 七类设计过程分类的业务骨架</li>
+          <li>账户体系与项目级、子项级编辑权限；独立的 accounts.db</li>
+          <li>过程记录 + 文件上传 / 版本 / 下载 / ZIP 导出</li>
+          <li>结构视图为主的单页界面、阶段确认、执行重点</li>
+          <li>离线内网部署包（单服务托管 dist）与增量更新包</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4><span class="tag t-danger">仍是占位</span></h4>
+        <ul style="font-size:13.5px; color:var(--text-2); margin-bottom:0">
+          <li>设计说明模板的「真填充」与 DOCX / PDF 规范化生成</li>
+          <li>DWG 图框属性批量写入（当前只是复制文件并改名为 _filled）</li>
+          <li>文件按「系统 + 阶段 + 前置信息」归档、跨项目同类文件对比</li>
+          <li>版本差异自动比对、人工锁版、按业务目录导出</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout info" style="margin-top:14px">
+      <b>整体判断：</b>业务闭环「能用」、工程治理「欠账」。处于<b>内网试用 / 演示级</b>，
+      离稳定交付主要差三件事：需求基线收敛、启动与验证链路固化、核心模板能力真正落地。
+    </div>
+  </section>
+
+  <!-- ============ 01 ============ -->
+  <section id="needs">
+    <div class="sec-head"><span class="sec-num">01</span><h2>这个项目要解决什么</h2></div>
+    <p class="sec-sub">需求来源：基础版 v0、V1~V3.1 需求说明书、PLAN 系列，以及 <code>MD_collect/问题.md</code> 里用户逐条提出的现场问题。</p>
+
+    <div class="card">
+      <p style="margin-bottom:8px"><b>一句话目标（需求基线原文）：</b></p>
+      <p style="font-size:17px; color:var(--brand); font-weight:600; margin-bottom:6px">「把设计过程记录对、存完整、找得到。」</p>
+      <p style="color:var(--muted); font-size:13.5px; margin:0">
+        面向暖通专业设计工程师的低侵入式辅助工具；不替代设计软件、不改变既有习惯，
+        只做「随用随查、随时补录」的过程留痕，强调可追溯、可解释、稳定性高于智能化。
+        <span class="mono">— 暖通设计管家｜需求说明书（基础版 v0）</span>
+      </p>
+    </div>
+
+    <h3>需求可以拆成三层</h3>
+    <div class="grid g3">
+      <div class="card tint">
+        <span class="tag t-info">A · 记录与归档</span>
+        <h4 style="margin-top:10px">设计过程怎么存</h4>
+        <ul style="font-size:13px; color:var(--text-2); margin-bottom:0">
+          <li>三阶段：方案 / 初步设计 / 施工图</li>
+          <li>七类过程：设计输入、收到提资、计算结果、对外提资、输出成果、出图后闭环、设计备注</li>
+          <li>每阶段有明确的输入清单、计算成果、跨专业提资与交付文件清单</li>
+          <li>文件按「系统 + 阶段 + 前置信息」分类存储；默认展示最新版，可展开历史版本</li>
+          <li>页面只列名称与附件名，不做内容对比；支持单文件 / 分类 / 阶段 / 整项目一键下载</li>
+        </ul>
+      </div>
+      <div class="card tint">
+        <span class="tag t-purple">B · 模板化产出</span>
+        <h4 style="margin-top:10px">怎么降低重复劳动</h4>
+        <ul style="font-size:13px; color:var(--text-2); margin-bottom:0">
+          <li>设计说明模板：用「设计输入 + 计算结果」的结构化字段填关键数据，其余为固定标准文本</li>
+          <li>目标：降低同类电站 / 同类厂房项目之间的描述差异度</li>
+          <li>一键生成设计说明 DOCX + PDF，作为阶段成果入库并版本化</li>
+          <li>批量把关键字段写入已上传 DWG 的图框属性，生成新版本、原件不覆盖</li>
+          <li>按「项目类型 + 设计阶段」管理模板，模板与字段清单由用户提供</li>
+        </ul>
+      </div>
+      <div class="card tint">
+        <span class="tag t-ok">C · 管理与追溯</span>
+        <h4 style="margin-top:10px">多人多项目怎么用</h4>
+        <ul style="font-size:13px; color:var(--text-2); margin-bottom:0">
+          <li>项目 &gt; 子项树形导航、搜索、默认折叠</li>
+          <li>阶段完成手动确认、执行重点、历史阶段对比、最近业务记录</li>
+          <li>跨项目浏览同类资料（如「制氯站给电气条件」）</li>
+          <li>管理员建号、按项目 / 子项授权、表格批量导入账户与项目</li>
+          <li>文件夹扫描：把已有本地目录结构映射成设计过程记录</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>明确划过的边界（冻结项）</h3>
+    <div class="card">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px">
+        <span class="tag t-grey">不做规范条款自动判断</span>
+        <span class="tag t-grey">不做自动计算 / 校核</span>
+        <span class="tag t-grey">不解析文件内容</span>
+        <span class="tag t-grey">不做审批流程</span>
+        <span class="tag t-grey">不做自动 OCR / AI 生成（V4+）</span>
+      </div>
+      <p style="font-size:13px; color:var(--muted); margin:0">
+        这些边界来自基础版 v0 与 PLAN.md 的 V1 冻结定义，但后续的 V3.1 与实际开发已经把「权限体系」「DWG 写入」「PDF 文本抽取」纳入范围 —— 这本身就是一个需要收口的需求矛盾，见第 03 节。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 02 ============ -->
+  <section id="progress">
+    <div class="sec-head"><span class="sec-num">02</span><h2>目前做到了什么</h2></div>
+    <p class="sec-sub">按日志还原的演进脉络 + 按模块核对的交付状态。</p>
+
+    <h3>演进时间线</h3>
+    <div class="card">
+      <div class="timeline">
+        <div class="tl"><div class="tl-date">2026-02-14</div><div class="tl-title">架构收敛与模块化重构</div><div class="tl-desc">删掉 Node/Express 双栈后端，统一到 FastAPI；拆分巨型 App.tsx 为多个视图与 hooks；补齐单元测试；建立 round-qa 日志与自动测试机制。</div></div>
+        <div class="tl"><div class="tl-date">2026-02 下旬</div><div class="tl-title">V1 基础能力落地</div><div class="tl-desc">任务状态、三阶段模板、树形导航、阶段/整项目 ZIP 导出、登录与主数据策略；V1.1/V1.2 需求修订。</div></div>
+        <div class="tl hot"><div class="tl-date">2026-03-20</div><div class="tl-title">第一次方向纠偏</div><div class="tl-desc">判定「当前系统还是任务管理工具」，与「记录设计过程 + 做设计模板」的真实诉求不符；产出 V2，把设计过程与模板管理提升为一级视图。</div></div>
+        <div class="tl"><div class="tl-date">2026-03-22</div><div class="tl-title">V3 / V3.1 需求成型</div><div class="tl-desc">新增 FR-11 阶段输入输出清单、FR-12 文件归档与版本管理、FR-13 设计说明模板与 DWG 图框填充；当轮落地的是「最小占位实现」且未运行测试。</div></div>
+        <div class="tl hot"><div class="tl-date">2026-03-28</div><div class="tl-title">第二次方向纠偏 + 业务模型重构（单日 18 轮）</div><div class="tl-desc">从任务状态流转为业务活动流；固定七类口径（设计输入 / 收到提资 / 计算结果 / 对外提资 / 输出成果 / 出图后闭环 / 设计备注）；新增阶段板、六/七类卡片直接上传、中文文件名修复、阶段确认、内网单服务部署起点。</div></div>
+        <div class="tl"><div class="tl-date">2026-03-29 ~ 04-03</div><div class="tl-title">界面持续收紧</div><div class="tl-desc">结构视图定稿、思维导图当天建当天删、取消「进度 / 结构」双模式只保留单一结构界面；新增执行重点、左栏独立滚动、阶段按钮固定；按 4 月 3 日两次问题清单逐条改版。</div></div>
+        <div class="tl"><div class="tl-date">2026-04-02</div><div class="tl-title">权限体系与导入导出</div><div class="tl-desc">项目级 + 子项级权限、账户库拆分为 accounts.db、表格批量导入账户与项目、导出 ZIP 三次修复闭环、README 重写。</div></div>
+        <div class="tl"><div class="tl-date">2026-04-07</div><div class="tl-title">规范条文全文阅读器</div><div class="tl-desc">PDF 文本抽取、目录 + 全文阅读器、跨规范搜索；同时把本地后端默认端口由 3001 改为 3101 以避开旧进程。</div></div>
+        <div class="tl"><div class="tl-date">2026-04-17</div><div class="tl-title">Conda 启动修复 + 内网包刷新</div><div class="tl-desc">改用仓库内 .conda-local 环境目录；同步 dist、后端、GB/ 规范 PDF 到部署包；3111 端口烟测 200。</div></div>
+        <div class="tl hot"><div class="tl-date">2026-04-27</div><div class="tl-title">移除「规范条文」整类 + 增量更新包</div><div class="tl-desc">原因：解析效果不理想、与公司已有标准网站重复。修复 App.tsx 损坏的字符串字面量；产出约 522 KB 的 20260427 增量包。这是最后一次有日志、有提交记录的轮次。</div></div>
+        <div class="tl hot"><div class="tl-date">2026-06-03（工作区痕迹）</div><div class="tl-title">新增「文件夹扫描」，但未入日志、未提交</div><div class="tl-desc">server/folder_scanner.py、src/components/scan/、菜单项「文件夹扫描」均为新增；App.tsx 与 app.py 的修改时间停在 6 月 3 日，此后无对应 round 日志、无测试记录、无提交。</div></div>
+      </div>
+    </div>
+
+    <h3>模块交付状态（对照当前源码）</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th style="width:24%">模块</th><th style="width:13%">状态</th><th>说明与依据</th></tr></thead>
+      <tbody>
+        <tr><td>登录 / 账户 / 权限</td><td><span class="tag t-ok">可用</span></td><td>admin 与 user 角色、项目/子项级编辑权限、独立 <code>accounts.db</code>、批量导入账户。<span class="sub">/api/auth/*、AccountManagementView.tsx</span></td></tr>
+        <tr><td>项目总览（结构视图）</td><td><span class="tag t-ok">可用</span></td><td>单一结构界面、三阶段按钮、七类分类 + 细项、阶段完成确认、执行重点、历史阶段对比。<span class="sub">SubprojectStructureView.tsx、FocusItemsPanel.tsx、process.ts</span></td></tr>
+        <tr><td>设计过程记录</td><td><span class="tag t-ok">可用</span></td><td>七类业务记录、中文业务时间线、按阶段上传过程文件、版本展示与下载。<span class="sub">DesignProcessView.tsx、ProcessStageBoard.tsx</span></td></tr>
+        <tr><td>模板管理 / 常见问题</td><td><span class="tag t-warn">部分</span></td><td>模板页面与知识库接口存在；模板字段与设计输入/计算结果尚未结构化绑定。<span class="sub">TemplatesView.tsx、ErrorsView.tsx</span></td></tr>
+        <tr><td>设计说明生成</td><td><span class="tag t-warn">占位</span></td><td>能生成 DOCX / PDF，但是把渲染出的纯文本手工拼进极简 zip/XML 与 PDF 对象，不是按模板占位符填充真实表单字段。<span class="sub">app.py 中 _generate_docx / _generate_pdf / _render_design_spec_text</span></td></tr>
+        <tr><td>DWG 图框填充</td><td><span class="tag t-danger">占位</span></td><td>接口 <code>/design-specs/{id}/dwg-fill</code> 目前只 <code>shutil.copyfile</code> 复制原文件、改名 <code>*_filled.dwg</code> 并登记为新版本，<b>没有写入任何图框属性</b>，也没有 AutoCAD 脚本引擎。<span class="sub">app.py 约 3547–3604 行</span></td></tr>
+        <tr><td>文件归档 / 版本</td><td><span class="tag t-warn">部分</span></td><td>上传路径仍是 <code>user/project/subproject/task</code>，不是业务要求的「系统 + 阶段 + 前置信息」；最终版 = 最新上传版本，差异靠手工摘要，无自动比对、无人工锁版。</td></tr>
+        <tr><td>跨项目同类文件对比浏览</td><td><span class="tag t-danger">未做</span></td><td>原始需求与 FR-12 均明确要求（如制氯站给电气条件跨项目对比），日志中无完成记录。</td></tr>
+        <tr><td>导出 / 导入</td><td><span class="tag t-ok">可用</span></td><td>阶段 / 整项目 ZIP 导出（含 manifest）、xlsx/csv 批量导入项目与账户；导出内容仍是附件打包，非业务成果目录结构。</td></tr>
+        <tr><td>文件夹扫描</td><td><span class="tag t-warn">新增待验</span></td><td>按「一级目录 → 过程分类、二级目录 → subtype、含版字 → 版本」映射本地目录并提供结果树与应用接口。<span class="sub">folder_scanner.py、FolderScannerView.tsx；未跟踪、无日志、无测试记录</span></td></tr>
+        <tr><td>内网部署</td><td><span class="tag t-ok">可用</span></td><td>FastAPI 单进程同时托管 dist 与 API，包内自带 Python runtime 可离线运行；有完整包与增量包。<span class="sub">DEPLOY_INTERNAL.md、start_intranet_server.bat、20260427/</span></td></tr>
+        <tr><td>规范条文</td><td><span class="tag t-grey">已移除</span></td><td>前端入口与请求已删，但后端 <code>/api/knowledge/standards*</code>、<code>/api/knowledge/clauses</code> 与 pdf_text_extractor.py 仍保留，根目录 GB/ 也在 —— 属于残留。</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>验证与部署现状</h3>
+    <div class="grid g2">
+      <div class="card">
+        <h4>验证记录</h4>
+        <ul style="font-size:13.5px; color:var(--text-2); margin-bottom:0">
+          <li><code>test-report-latest.md</code>：2026-02-23，8 测试文件 / 16 用例、生产构建、后端语法全部 PASS</li>
+          <li>04-27 日志：9 文件 / 16 用例 + <code>npm run build</code> 通过（未更新正式报告）</li>
+          <li>04-17 / 04-27：内网包烟测 HTTP 200</li>
+          <li><b>6 月 3 日之后的改动没有任何验证记录</b>；全量 <code>tsc --noEmit</code> 自 03-29 起因 html/ 目录干扰被「定向 TypeScript 检查」替代</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>运行形态</h4>
+        <ul style="font-size:13.5px; color:var(--text-2); margin-bottom:0">
+          <li>开发：Vite 前端 3000 + Uvicorn 后端，<code>vite.config.ts</code> 代理指向 <b>3101</b></li>
+          <li>内网单服务：浏览器直接访问 <code>http://服务器IP:3001/</code>（README / DEPLOY_INTERNAL 口径）</li>
+          <li>历史上还出现过 3111 烟测端口 —— 端口口径共 3000 / 3001 / 3101 / 3111 四套</li>
+          <li>启动入口：start_all.bat、start_web_only.vbs、start_hidden_process.vbs、start_web_only_worker.bat、start_frontend_worker.bat、start_backend_worker.bat、start_intranet_server.bat、start_lan.bat 等并存</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 ============ -->
+  <section id="issues">
+    <div class="sec-head"><span class="sec-num">03</span><h2>存在的问题</h2></div>
+    <p class="sec-sub">按「产品需求 / 工程质量 / 版本交付」三类归纳，每条都附可回查的依据。点击筛选查看某一类。</p>
+
+    <div class="filters" id="filters">
+      <button class="btn active" data-f="all">全部 <span id="cnt-all"></span></button>
+      <button class="btn" data-f="product">产品与需求</button>
+      <button class="btn" data-f="eng">工程与质量</button>
+      <button class="btn" data-f="delivery">版本与交付</button>
+    </div>
+
+    <div id="issues-list">
+
+      <div class="issue" data-cat="product">
+        <div class="issue-head"><span class="idx">P-01</span><span class="tag t-purple">产品与需求</span><span class="tag t-danger">优先</span><h4 style="margin:0">没有一份「当前有效」的需求基线</h4></div>
+        <p>Needs/ 里并存 v0、V1、V2、V3、V3.1 五份文档，PLAN/ 里并存四份计划，彼此口径冲突：v0 与 PLAN.md 明确「不引入权限、不解析文件内容、不做 DWG 写入」，而 V3.1 把权限体系、DOCX/PDF 生成、DWG 图框填充分别列为必做项；V3.1 定义的 5 视图架构（含规范条文）与现在实际的 6 项菜单也不一致。继续开发时很难判断哪份算数。</p>
+        <div class="evidence"><b>依据：</b>MD_collect/Needs/需求说明书_V3_1.md 第 2 节「5 视图架构」；PLAN.md 第 1 节 V1 冻结边界；src/App.tsx 第 776–785 行菜单定义；round-qa-2026-04-27.md 已移除规范条文。</div>
+      </div>
+
+      <div class="issue" data-cat="product">
+        <div class="issue-head"><span class="idx">P-02</span><span class="tag t-purple">产品与需求</span><span class="tag t-danger">优先</span><h4 style="margin:0">最有价值的两项能力仍是占位实现</h4></div>
+        <p>「设计说明模板真填充」与「DWG 图框批量填充」是本项目区别于通用任务/网盘工具的核心，但当前只做到了接口与文件产出：DOCX/PDF 是手写极简格式拼纯文本；DWG 接口只复制一份文件改成 <code>*_filled.dwg</code> 并记为新版本，图框属性一个字节都没写，也没有 AutoCAD 脚本引擎与失败回滚。</p>
+        <div class="evidence"><b>依据：</b>server/app.py 的 <code>fill_dwg_frames</code>（约 3481 行起，<code>shutil.copyfile(file_path, stored_path)</code>）、<code>_generate_docx</code> / <code>_generate_pdf</code>（约 2397 行起）；round-qa-2026-03-22.md 第 3 轮标注「最小占位实现、未运行测试」；round-qa-2026-03-28.md 第 4 轮 P0-6 明确「拿到 AutoCAD 脚本和字段清单后再做真实落地」。</div>
+      </div>
+
+      <div class="issue" data-cat="product">
+        <div class="issue-head"><span class="idx">P-03</span><span class="tag t-purple">产品与需求</span><h4 style="margin:0">需求确认机制缺失，返工率高</h4></div>
+        <p>规范条文全文阅读器 04-07 建成、04-17 打进部署包、04-27 因「解析效果不理想 + 与公司标准网站重复」整类删除，仅 20 天；思维导图 03-28 当天建、加强两次、当天删除；「进度视图 / 结构视图」双模式、施工阶段二级标签口径、七类分类口径都发生过回滚。用户本人也在问题清单里反复写「理解我的整体需求，向我提问，直到需求确认为止」。</p>
+        <div class="evidence"><b>依据：</b>MD_collect/问题.md 第 86、95 行；round-qa-2026-03-28.md 第 9/10/14/17 轮；round-qa-2026-04-03.md 第 4 轮；round-qa-2026-04-27.md。</div>
+      </div>
+
+      <div class="issue" data-cat="product">
+        <div class="issue-head"><span class="idx">P-04</span><span class="tag t-purple">产品与需求</span><h4 style="margin:0">「找得到」这一半目标没完成</h4></div>
+        <p>原始需求里最具体的场景是「同一类型厂房如制氯站的给电气条件，可以对比各项目」「整个厂房的所有相关文件」「默认展示最新版本、展开看所有版本」，以及服务端按系统和阶段分类存储。目前上传路径仍是 <code>user/project/subproject/task</code>，导出仍是附件打包，跨项目同类文件对比浏览、按业务成果目录组织导出、版本差异自动比对、人工锁版都未落地。</p>
+        <div class="evidence"><b>依据：</b>MD_collect/问题.md 第 74–76 行；需求说明书_V3_1.md FR-12；round-qa-2026-03-28.md 第 3 轮 P1 清单、第 12–13 轮（「这轮没有做自动比对引擎」）；server/app.py 上传目录构造。</div>
+      </div>
+
+      <div class="issue" data-cat="eng">
+        <div class="issue-head"><span class="idx">E-01</span><span class="tag t-warn">工程与质量</span><span class="tag t-danger">顽固</span><h4 style="margin:0">启动链路 20+ 轮未收敛</h4></div>
+        <p>Conda 探测、VBS 隐藏启动、bat 引号与中文乱码、浏览器不自动打开、端口被旧进程占用等问题，从 2 月到 4 月横跨 8 个日期反复修；目前仍有 8 个启动脚本并存，端口口径分裂成 3000 / 3001 / 3101 / 3111，README 写 3001 而 vite 代理写 3101。多轮日志还注明「无法在沙箱内完整复现本机双击 VBS 的行为」，属于靠人工验证的盲修。</p>
+        <div class="evidence"><b>依据：</b>round-qa-2026-02-14.md 第 15–20 轮、round-qa-2026-03-31.md 第 2–8 轮、round-qa-2026-04-03.md 第 1–3 轮、round-qa-2026-04-17.md Round 1；vite.config.ts 的 <code>HVAC_BACKEND_URL || http://127.0.0.1:3101</code>；README.md 第 168 行。</div>
+      </div>
+
+      <div class="issue" data-cat="eng">
+        <div class="issue-head"><span class="idx">E-02</span><span class="tag t-warn">工程与质量</span><h4 style="margin:0">后端单文件过大、数据模型脆弱</h4></div>
+        <p>app.py 近 3,860 行集中了认证、权限、项目、文件、知识库、导出、设计说明、DWG、文件夹扫描等全部逻辑；项目主数据以 JSON blob 存在 SQLite 单表，账户与权限另放 accounts.db，依赖启动时自动迁移，没有版本化迁移脚本；数据库文件多次出现「本地变更未纳入日志提交」。查询、测试、加字段都会越来越脆。</p>
+        <div class="evidence"><b>依据：</b>server/app.py（3,858 行、37 个 @app 装饰器）；02-14 第 1 轮 P2 建议「从单表 JSON blob 拆到可查询结构、增加迁移脚本和数据版本号」；04-02 第 4/5 轮 accounts.db 拆分与现场迁移；git status 中 server/hvac.db 为 M。</div>
+      </div>
+
+      <div class="issue" data-cat="eng">
+        <div class="issue-head"><span class="idx">E-03</span><span class="tag t-warn">工程与质量</span><h4 style="margin:0">验证口径退化、测试覆盖偏薄</h4></div>
+        <p>唯一一份正式测试报告是 2026-02-23 的，之后的验证散落在日志文字里；全量 TypeScript 检查被「定向检查」替代；16 个用例主要覆盖 hooks 与少量组件，几乎没有后端 API 与端到端流程测试；VBS 启动只能靠用户本机双击验证。04-27 还出现过「App.tsx 多处损坏的字符串/模板字面量导致前端无法编译」。</p>
+        <div class="evidence"><b>依据：</b>test-report-latest.md（Generated At 2026-02-23）；round-qa-2026-03-29.md 第 6 轮；src/tests/ 仅 9 个测试文件；round-qa-2026-04-27.md。</div>
+      </div>
+
+      <div class="issue" data-cat="eng">
+        <div class="issue-head"><span class="idx">E-04</span><span class="tag t-warn">工程与质量</span><h4 style="margin:0">中文编码反复破坏源码与脚本文档</h4></div>
+        <p>bat 中文提示被 cmd 当命令执行、VBS 中文提示乱码破坏字符串引号导致「语句未结束 800A0401」、README 与 DEPLOY_INTERNAL 需重写为干净 UTF-8、App.tsx 字符串/模板字面量损坏 —— 同一类根因在不同文件里反复出现，说明缺少统一的编码与写入约定。</p>
+        <div class="evidence"><b>依据：</b>round-qa-2026-02-14.md 第 16 轮、round-qa-2026-04-02.md 第 12 轮、round-qa-2026-04-03.md 第 2 轮、round-qa-2026-04-17.md Round 2、round-qa-2026-04-27.md。</div>
+      </div>
+
+      <div class="issue" data-cat="eng">
+        <div class="issue-head"><span class="idx">E-05</span><span class="tag t-warn">工程与质量</span><h4 style="margin:0">已删功能的后端残留未清理</h4></div>
+        <p>规范条文前端入口已移除，但后端仍保留 standards / search / pdf、clauses 全套接口与 PDF 抽取模块，根目录 GB/ 规范原文也还在；部署包里则已删除。代码与界面、部署包三者状态不一致，后续维护容易误判「功能是否还在」。</p>
+        <div class="evidence"><b>依据：</b>server/app.py 中 <code>/api/knowledge/standards*</code>、<code>/api/knowledge/clauses</code>；server/pdf_text_extractor.py；src/App.tsx 的 VIEW_TITLES 仍含 regulations；根目录 GB/。</div>
+      </div>
+
+      <div class="issue" data-cat="delivery">
+        <div class="issue-head"><span class="idx">D-01</span><span class="tag t-danger">版本与交付</span><span class="tag t-danger">优先</span><h4 style="margin:0">工作区大量改动未提交，代码与日志脱节</h4></div>
+        <p>最后一次提交 <code>ea69777</code> 是 04-27 的日志提交；当前有 27 个已跟踪文件被修改（约 2,352 行新增 / 338 行删除），另有 .conda-local/、archive/、server/folder_scanner.py、src/components/scan/、多个 rar 包等未跟踪内容。6 月 3 日新增的文件夹扫描功能没有对应的 round 日志、没有验证记录、没有提交 —— 换句话说，现在磁盘上的代码已经不是任何一份文档所描述的那个版本了。</p>
+        <div class="evidence"><b>依据：</b>git status --short、git diff --stat、git log --oneline；src/App.tsx / server/app.py / folder_scanner.py 的修改时间 2026-06-03；仓库内最新 round-qa 为 2026-04-27。</div>
+      </div>
+
+      <div class="issue" data-cat="delivery">
+        <div class="issue-head"><span class="idx">D-02</span><span class="tag t-danger">版本与交付</span><h4 style="margin:0">部署包多份且内容不一致</h4></div>
+        <p>同时存在 deploy-package-hvac-intranet-20260328/ 完整目录、同名 rar、20260427/ 增量目录与 rar、mail-parts 分卷残留，以及根目录多个压缩包。完整包里仍含旧规范条文相关代码与业务数据；03-28 日志提出的「不含现有数据的纯净包」一直没有交付。默认账号 admin / 123456 也写在部署说明里，正式内网使用前需处理。</p>
+        <div class="evidence"><b>依据：</b>DEPLOY_INTERNAL.md 默认账号段；20260427/更新说明.txt（明确不含 db / uploads）；round-qa-2026-03-28.md 第 18 轮；根目录文件清单与 git status 中的 D 记录。</div>
+      </div>
+
+      <div class="issue" data-cat="delivery">
+        <div class="issue-head"><span class="idx">D-03</span><span class="tag t-danger">版本与交付</span><h4 style="margin:0">调试残留与文档散落</h4></div>
+        <p>根目录留有 recover.py、zed_db_dump.sql、zed_global_db_dump.sql、zed_recovery.txt、zed_schema.txt、多份截图与临时文件，archive/ 下还有两套历史快照和重复的对话记录。03-20 曾提出「清理大文件」但未定位到体积来源、没有收口，如今体积问题以多个部署压缩包的形式重新出现。</p>
+        <div class="evidence"><b>依据：</b>根目录文件清单；round-qa-2026-03-20.md 第 1 轮；MD_collect/round/ 与 archive/ 中重复日志副本。</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ 04 ============ -->
+  <section id="roadmap">
+    <div class="sec-head"><span class="sec-num">04</span><h2>继续完善，建议按这个顺序</h2></div>
+    <p class="sec-sub">只给路线，不动代码。下面清单可以在本页勾选，勾选状态会保存在本机浏览器里，方便接着往下做。</p>
+
+    <div class="card">
+      <div class="phase">
+        <div class="phase-label"><span class="tag t-danger">P0 · 先收口</span><div style="font-size:12px;color:var(--muted);margin-top:6px">让「现状」可复现</div></div>
+        <div>
+          <ul class="todo">
+            <li><input type="checkbox" id="t1"><label for="t1">定一份唯一有效的需求基线：以 V3.1 为底，合并 4/3 两次问题清单、4/27 删除项、文件夹扫描新需求，把 v0/V1/V2/V3 标注为历史版本</label></li>
+            <li><input type="checkbox" id="t2"><label for="t2">清点并提交 / 归档当前工作区改动，补写 6 月 3 日文件夹扫描这一轮的日志与验证结果</label></li>
+            <li><input type="checkbox" id="t3"><label for="t3">统一端口与启动入口：只保留一条开发链路 + 一条内网链路，文档、vite 代理、bat/vbs 三处口径一致</label></li>
+            <li><input type="checkbox" id="t4"><label for="t4">恢复全量类型检查与可复现的自动化验证（单元测试 + 构建 + 后端 API 冒烟），重新生成正式测试报告</label></li>
+            <li><input type="checkbox" id="t5"><label for="t5">清理已删功能的后端残留与调试文件，统一编码约定（脚本提示统一纯 ASCII 或统一 UTF-8 写入）</label></li>
+          </ul>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-label"><span class="tag t-warn">P1 · 补核心</span><div style="font-size:12px;color:var(--muted);margin-top:6px">把「卖点」做实</div></div>
+        <div>
+          <ul class="todo">
+            <li><input type="checkbox" id="t6"><label for="t6">先向用户收齐三样输入：设计说明模板原件、关键数据字段清单、DWG 图框属性名与 AutoCAD 脚本样例 —— 这是 FR-13 落地的前置条件</label></li>
+            <li><input type="checkbox" id="t7"><label for="t7">建立「设计输入 / 计算结果」结构化字段字典，把模板字段与字段来源一一映射，替换当前自由 JSON payload</label></li>
+            <li><input type="checkbox" id="t8"><label for="t8">设计说明改为按模板占位符真填充，DOCX/PDF 生成改用成熟库并校验字段一致性</label></li>
+            <li><input type="checkbox" id="t9"><label for="t9">DWG 图框填充：接真实脚本引擎 + 字段缺失/脚本失败的可读报错与回滚；若短期做不到，明确降级为「仅归档」并在界面标注，避免假成功</label></li>
+            <li><input type="checkbox" id="t10"><label for="t10">文件归档路径改为「系统 + 阶段 + 前置信息」，导出按业务成果目录组织，实现跨项目同类文件对比浏览</label></li>
+          </ul>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-label"><span class="tag t-info">P2 · 再打磨</span><div style="font-size:12px;color:var(--muted);margin-top:6px">体验与交付</div></div>
+        <div>
+          <ul class="todo">
+            <li><input type="checkbox" id="t11"><label for="t11">版本差异自动比对、人工锁版 / 手动设为最终版、设计过程导出 Markdown / PDF</label></li>
+            <li><input type="checkbox" id="t12"><label for="t12">后端按域拆分模块，为主数据引入版本化迁移脚本，替掉启动时自动迁移</label></li>
+            <li><input type="checkbox" id="t13"><label for="t13">制作「纯净内网部署包」（不含业务数据），统一完整包 / 增量包版本号，密码策略与首次改密</label></li>
+            <li><input type="checkbox" id="t14"><label for="t14">补后端 API 与关键业务流程的自动化测试，形成可交付的验收清单</label></li>
+          </ul>
+        </div>
+      </div>
+      <div class="progress-note" id="todo-progress">已完成 0 / 14 项</div>
+    </div>
+
+    <div class="callout">
+      <b>一个提醒：</b>P1 里最有价值的两项（设计说明真填充、DWG 图框写入）之所以一直是占位，根因不是代码难度，而是<b>模板原件、字段清单、图框属性名这三份业务输入还没有定型</b>。建议先把这三份材料确认下来再动手，避免重演「规范条文建成 20 天后整类删除」。
+    </div>
+  </section>
+
+  <!-- ============ 05 ============ -->
+  <section id="sources">
+    <div class="sec-head"><span class="sec-num">05</span><h2>资料索引</h2></div>
+    <p class="sec-sub">继续完善时按此回查；路径均相对项目根目录。</p>
+    <div class="grid g2">
+      <div class="card">
+        <h4>需求与计划</h4>
+        <ul class="filelist" style="columns:1">
+          <li><code>MD_collect/Needs/暖通设计管家｜需求说明书（基础版_v_0.md</code> — 需求基线 / 冻结边界</li>
+          <li><code>MD_collect/Needs/需求说明书_V1.md ~ V3_1.md</code> — 版本演进</li>
+          <li><code>MD_collect/Plan/PLAN.md</code> — 阶段 0~7 计划与成功标准</li>
+          <li><code>MD_collect/Plan/PLAN_2026年4月3日-1.md</code> — 界面收紧方案</li>
+          <li><code>MD_collect/问题.md</code> — 用户原始业务描述与逐次问题清单（最重要）</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>过程记录与验证</h4>
+        <ul class="filelist" style="columns:1">
+          <li><code>MD_collect/round/round-qa-2026-02-14 ~ 04-07.md</code> — 12 份开发日志</li>
+          <li><code>round-qa-2026-04-17.md</code>、<code>round-qa-2026-04-27.md</code> — 最近两轮</li>
+          <li><code>AGENTS.md</code> — 日志与提交规则</li>
+          <li><code>test-report-latest.md</code>（2026-02-23）、<code>chrome-devtools-mcp-test-report.md</code></li>
+          <li><code>README.md</code>、<code>DEPLOY_INTERNAL.md</code>、<code>20260427/更新说明.txt</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h4>代码与部署</h4>
+      <ul class="filelist">
+        <li><code>src/App.tsx</code> — 视图与菜单</li>
+        <li><code>src/components/dashboard/</code> — 结构视图 / 执行重点</li>
+        <li><code>src/components/process/</code> — 设计过程</li>
+        <li><code>src/components/templates/</code> — 模板管理</li>
+        <li><code>src/components/scan/</code> — 文件夹扫描（新增）</li>
+        <li><code>src/process.ts</code>、<code>src/types.ts</code> — 业务口径与数据模型</li>
+        <li><code>server/app.py</code> — 全部后端逻辑</li>
+        <li><code>server/folder_scanner.py</code> — 目录扫描（新增）</li>
+        <li><code>server/hvac.db</code> / <code>accounts.db</code> / <code>uploads/</code></li>
+        <li><code>dist/</code>、<code>deploy-package-hvac-intranet-20260328/</code>、<code>20260427/</code></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    本页为基于仓库现有资料的只读梳理，生成于 2026-11-16；未修改任何现有业务文件、代码或数据。
+    若与源码或需求文档有出入，以仓库原文为准。
+  </footer>
+
+  </main>
+</div>
+
+<script>
+  // 目录滚动高亮
+  (function(){
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+    function update(){
+      var y = window.scrollY + 120, current = sections[0];
+      sections.forEach(function(s){ if(s && s.offsetTop <= y) current = s; });
+      links.forEach(function(a){ a.classList.toggle('active', a.getAttribute('href') === '#' + (current && current.id)); });
+    }
+    window.addEventListener('scroll', update, {passive:true});
+    update();
+  })();
+
+  // 问题筛选
+  (function(){
+    var btns = Array.prototype.slice.call(document.querySelectorAll('#filters .btn'));
+    var items = Array.prototype.slice.call(document.querySelectorAll('#issues-list .issue'));
+    document.getElementById('cnt-all').textContent = '(' + items.length + ')';
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        btns.forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        var f = b.getAttribute('data-f');
+        items.forEach(function(it){ it.style.display = (f === 'all' || it.getAttribute('data-cat') === f) ? '' : 'none'; });
+      });
+    });
+  })();
+
+  // 待办勾选（本机保存）
+  (function(){
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.todo input'));
+    var note = document.getElementById('todo-progress');
+    function paint(){
+      var done = boxes.filter(function(b){ return b.checked; }).length;
+      note.textContent = '已完成 ' + done + ' / ' + boxes.length + ' 项';
+    }
+    boxes.forEach(function(b){
+      var key = 'hvac-review-' + b.id;
+      try{ b.checked = localStorage.getItem(key) === '1'; }catch(e){}
+      b.addEventListener('change', function(){
+        try{ localStorage.setItem(key, b.checked ? '1' : '0'); }catch(e){}
+        paint();
+      });
+    });
+    paint();
+  })();
+</script>
+</body>
+</html>
